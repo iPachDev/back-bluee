@@ -5,9 +5,10 @@ import { UsersFeatureModule } from './users/users.module';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { TraceInterceptor } from './common/trace.interceptor';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
-  imports: [DatabaseModule, UsersFeatureModule],
+  imports: [DatabaseModule, UsersFeatureModule, AuthModule],
   controllers: [UsersController],
   providers: [
     UsersService,
