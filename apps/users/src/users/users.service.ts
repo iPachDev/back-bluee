@@ -108,4 +108,27 @@ export class UsersService {
     }
     return query.select('-password').exec();
   }
+
+  async findByIdWithPassword(id: string) {
+    if (!id) {
+      throw new Error('el _id es requerido');
+    }
+    return this.userModel.findById(id).select('+password').exec();
+  }
+
+  async getTokenVersion(id: string) {
+    const user = await this.userModel.findById(id).select('tokenVersion').exec();
+    return user?.tokenVersion ?? 0;
+  }
+
+  async bumpTokenVersion(id: string) {
+    if (!id) {
+      throw new Error('el _id es requerido');
+    }
+    await this.userModel.updateOne(
+      { _id: id },
+      { $inc: { tokenVersion: 1 } },
+    );
+    return { ok: true };
+  }
 }

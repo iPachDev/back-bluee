@@ -82,4 +82,56 @@ export class AuthService {
       employeeProfile?: Record<string, unknown> | null;
     }>;
   }
+
+  async changePassword(
+    payload: { userId: string; currentPassword: string; newPassword: string },
+    meta: RmqRequest<unknown>['meta'],
+  ) {
+    return (await firstValueFrom(
+      this.client.send(
+        { cmd: 'auth.change-password' },
+        { data: payload, meta },
+      ),
+    )) as ResponseEnvelope<{ ok: true }>;
+  }
+
+  async getTokenVersion(userId: string) {
+    return (await firstValueFrom(
+      this.client.send(
+        { cmd: 'auth.token-version' },
+        { data: { userId }, meta: { transactionId: '', source: 'back-bluee' } },
+      ),
+    )) as ResponseEnvelope<{ tokenVersion: number }>;
+  }
+
+  async listSessions(
+    payload: { userId: string },
+    meta: RmqRequest<unknown>['meta'],
+  ) {
+    return (await firstValueFrom(
+      this.client.send(
+        { cmd: 'auth.sessions' },
+        { data: payload, meta },
+      ),
+    )) as ResponseEnvelope<{
+      active: Array<{
+        id: string;
+        ip?: string;
+        createdAt: string;
+        expiresAt: string;
+      }>;
+    }>;
+  }
+
+  async revokeSession(
+    payload: { userId: string; sessionId: string },
+    meta: RmqRequest<unknown>['meta'],
+  ) {
+    return (await firstValueFrom(
+      this.client.send(
+        { cmd: 'auth.revoke-session' },
+        { data: payload, meta },
+      ),
+    )) as ResponseEnvelope<{ ok: true }>;
+  }
 }

@@ -1,0 +1,33 @@
+sequenceDiagram
+  autonumber
+  participant Client as Cliente
+  participant GW as back-bluee (API Gateway)
+  participant Users as users MS
+  participant DB as MongoDB
+
+  rect rgba(220, 240, 255, 0.1)
+  Note over Client,GW: Listar sesiones
+  Client->>GW: GET /auth/sessions (cookies)
+  GW->>GW: JwtAuthGuard.canActivate() [apps/back-bluee/src/auth/guards/jwt-auth.guard.ts]
+  GW->>GW: AuthController.sessions() [apps/back-bluee/src/auth/auth.controller.ts]
+  GW->>Users: AuthService.listSessions() [apps/back-bluee/src/auth/auth.service.ts] via RMQ auth.sessions
+  Users->>Users: AuthController.sessions() [apps/users/src/auth/auth.controller.ts]
+  Users->>Users: AuthService.listSessions() [apps/users/src/auth/auth.service.ts]
+  Users->>DB: query refresh_tokens (active + recent)
+  Users-->>GW: ResponseEnvelope{active}
+  GW-->>Client: ResponseEnvelope{data}
+  end
+
+  rect rgba(255, 240, 200, 0.1)
+  Note over Client,GW: Revocar sesión
+  Client->>GW: POST /auth/sessions/revoke { sessionId }
+  GW->>GW: JwtAuthGuard.canActivate() [apps/back-bluee/src/auth/guards/jwt-auth.guard.ts]
+  GW->>GW: AuthController.revokeSession() [apps/back-bluee/src/auth/auth.controller.ts]
+  GW->>Users: AuthService.revokeSession() [apps/back-bluee/src/auth/auth.service.ts] via RMQ auth.revoke-session
+  Users->>Users: AuthController.revokeSession() [apps/users/src/auth/auth.controller.ts]
+  Users->>Users: AuthService.revokeSession() [apps/users/src/auth/auth.service.ts]
+  Users->>DB: update refresh_tokens set revokedAt
+  Users->>DB: increment user.tokenVersion
+  Users-->>GW: ResponseEnvelope{ok}
+  GW-->>Client: ResponseEnvelope{ok}
+  end

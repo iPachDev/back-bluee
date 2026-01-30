@@ -49,4 +49,48 @@ export class AuthController {
     const { data } = normalizeRmqPayload(payload);
     return this.authService.me(data);
   }
+
+  @MessagePattern({ cmd: 'auth.change-password' })
+  changePassword(
+    @Payload()
+    payload:
+      | RmqRequest<{
+          userId: string;
+          currentPassword: string;
+          newPassword: string;
+        }>
+      | { userId: string; currentPassword: string; newPassword: string },
+  ) {
+    const { data } = normalizeRmqPayload(payload);
+    return this.authService.changePassword(data);
+  }
+
+  @MessagePattern({ cmd: 'auth.sessions' })
+  sessions(
+    @Payload()
+    payload: RmqRequest<{ userId: string }> | { userId: string },
+  ) {
+    const { data } = normalizeRmqPayload(payload);
+    return this.authService.listSessions(data);
+  }
+
+  @MessagePattern({ cmd: 'auth.revoke-session' })
+  revokeSession(
+    @Payload()
+    payload:
+      | RmqRequest<{ userId: string; sessionId: string }>
+      | { userId: string; sessionId: string },
+  ) {
+    const { data } = normalizeRmqPayload(payload);
+    return this.authService.revokeSession(data);
+  }
+
+  @MessagePattern({ cmd: 'auth.token-version' })
+  tokenVersion(
+    @Payload()
+    payload: RmqRequest<{ userId: string }> | { userId: string },
+  ) {
+    const { data } = normalizeRmqPayload(payload);
+    return this.authService.getTokenVersion(data);
+  }
 }

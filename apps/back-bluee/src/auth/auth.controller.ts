@@ -97,6 +97,69 @@ export class AuthController {
     });
   }
 
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(
+    @Body() body: { currentPassword: string; newPassword: string },
+    @Req() req: TransactionRequest & Request & { user?: { sub: string } },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const transactionId = req.transactionId;
+    return this.handleResponse(res, transactionId, async () => {
+      const userId = req.user?.sub ?? '';
+      const result = await this.authService.changePassword(
+        { userId, ...body },
+        { transactionId, source: 'back-bluee' },
+      );
+      if (!result.headers?.isSuccess) {
+        throw new Error(result.errors?.[0] || 'error inesperado');
+      }
+      res.clearCookie('refresh_token', this.cookieOptions());
+      return { data: { ok: true }, trace: result.headers?.trazability ?? [] };
+    });
+  }
+
+  @Get('sessions')
+  @UseGuards(JwtAuthGuard)
+  async sessions(
+    @Req() req: TransactionRequest & Request & { user?: { sub: string } },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const transactionId = req.transactionId;
+    return this.handleResponse(res, transactionId, async () => {
+      const userId = req.user?.sub ?? '';
+      const result = await this.authService.listSessions(
+        { userId },
+        { transactionId, source: 'back-bluee' },
+      );
+      if (!result.headers?.isSuccess) {
+        throw new Error(result.errors?.[0] || 'error inesperado');
+      }
+      return { data: result.data ?? null, trace: result.headers?.trazability ?? [] };
+    });
+  }
+
+  @Post('sessions/revoke')
+  @UseGuards(JwtAuthGuard)
+  async revokeSession(
+    @Body() body: { sessionId: string },
+    @Req() req: TransactionRequest & Request & { user?: { sub: string } },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const transactionId = req.transactionId;
+    return this.handleResponse(res, transactionId, async () => {
+      const userId = req.user?.sub ?? '';
+      const result = await this.authService.revokeSession(
+        { userId, sessionId: body.sessionId },
+        { transactionId, source: 'back-bluee' },
+      );
+      if (!result.headers?.isSuccess) {
+        throw new Error(result.errors?.[0] || 'error inesperado');
+      }
+      return { data: { ok: true }, trace: result.headers?.trazability ?? [] };
+    });
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async me(

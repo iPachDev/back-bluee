@@ -35,4 +35,5 @@ export interface AuthUserPayload {
   roles?: string[];
   permissions?: string[];
   employeeId?: string;
+  tokenVersion?: number;
 }

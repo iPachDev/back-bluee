@@ -105,10 +105,14 @@ export class AuthService {
       return { ok: true };
     }
     const parsed = this.parseRefreshToken(payload.refreshToken);
+    const doc = await this.refreshModel.findOne({ jti: parsed.jti });
     await this.refreshModel.updateOne(
       { jti: parsed.jti },
       { $set: { revokedAt: new Date() } },
     );
+    if (doc?.userId) {
+      await this.usersService.bumpTokenVersion(doc.userId);
+    }
     return { ok: true };
   }
 
@@ -129,6 +133,82 @@ export class AuthService {
     };
   }
 
+  async getTokenVersion(payload: { userId: string }) {
+    const tokenVersion = await this.usersService.getTokenVersion(payload.userId);
+    return { tokenVersion };
+  }
+
+  async changePassword(payload: {
+    userId: string;
+    currentPassword: string;
+    newPassword: string;
+  }) {
+    if (!payload.userId || !payload.currentPassword || !payload.newPassword) {
+      throw new Error('datos incompletos');
+    }
+    const user = await this.usersService.findByIdWithPassword(payload.userId);
+    if (!user) {
+      throw new Error('usuario no encontrado');
+    }
+    const ok = await bcrypt.compare(payload.currentPassword, user.password || '');
+    if (!ok) {
+      throw new Error('credenciales inválidas');
+    }
+    await this.usersService.update({
+      _id: payload.userId,
+      password: payload.newPassword,
+    });
+    await this.usersService.bumpTokenVersion(payload.userId);
+    await this.refreshModel.updateMany(
+      { userId: String(payload.userId), revokedAt: { $exists: false } },
+      { $set: { revokedAt: new Date() } },
+    );
+    return { ok: true };
+  }
+
+  async listSessions(payload: { userId: string }) {
+    if (!payload.userId) {
+      throw new Error('usuario no encontrado');
+    }
+    const now = new Date();
+    const activeDocs = await this.refreshModel
+      .find({
+        userId: String(payload.userId),
+        revokedAt: { $exists: false },
+        expiresAt: { $gt: now },
+      })
+      .sort({ createdAt: -1 })
+      .limit(10);
+    const recentDocs = await this.refreshModel
+      .find({ userId: String(payload.userId) })
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    return {
+      active: activeDocs.map((doc) => ({
+        id: doc.jti,
+        ip: doc.ip,
+        createdAt: doc.createdAt?.toISOString?.() || '',
+        expiresAt: doc.expiresAt?.toISOString?.() || '',
+      })),
+    };
+  }
+
+  async revokeSession(payload: { userId: string; sessionId: string }) {
+    if (!payload.userId || !payload.sessionId) {
+      throw new Error('datos incompletos');
+    }
+    const result = await this.refreshModel.updateOne(
+      { userId: String(payload.userId), jti: payload.sessionId },
+      { $set: { revokedAt: new Date() } },
+    );
+    if (result.matchedCount === 0) {
+      throw new Error('sesión no encontrada');
+    }
+    await this.usersService.bumpTokenVersion(payload.userId);
+    return { ok: true };
+  }
+
   private async findUserByEmail(email: string, includePassword = false) {
     return this.usersService.findByEmail(email, includePassword);
   }
@@ -145,6 +225,7 @@ export class AuthService {
       roles: user.roles ?? ['user'],
       permissions: user.permissions ?? [],
       employeeId: user.employeeId,
+      tokenVersion: user.tokenVersion ?? 0,
     };
     return this.jwtService.sign(payload, { secret, expiresIn: this.accessTtl });
   }

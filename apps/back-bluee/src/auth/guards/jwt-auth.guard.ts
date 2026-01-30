@@ -2,12 +2,16 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { AuthUserPayload } from '../../common/response.interface';
+import { AuthService } from '../auth.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly authService: AuthService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context
       .switchToHttp()
       .getRequest<Request & { user?: AuthUserPayload }>();
@@ -23,6 +27,11 @@ export class JwtAuthGuard implements CanActivate {
       const payload = this.jwtService.verify<AuthUserPayload>(token, {
         secret,
       });
+      const result = await this.authService.getTokenVersion(payload.sub);
+      const dbVersion = result.data?.tokenVersion ?? 0;
+      if ((payload.tokenVersion ?? 0) !== dbVersion) {
+        throw new Error('no autorizado');
+      }
       req.user = payload;
       return true;
     } catch {
