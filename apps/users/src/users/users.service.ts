@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class UsersService {
@@ -12,6 +13,13 @@ export class UsersService {
   async create(payload: Record<string, unknown>) {
     if (payload && '_id' in payload) {
       delete (payload as Record<string, unknown>)._id;
+    }
+    const password = payload?.password as string | undefined;
+    if (password && !password.startsWith('$2')) {
+      (payload as Record<string, unknown>).password = await bcrypt.hash(
+        password,
+        10,
+      );
     }
     const employeeNumber = (
       payload?.employment as Record<string, unknown> | undefined
@@ -31,6 +39,13 @@ export class UsersService {
     const id = payload?._id as string | undefined;
     if (!id) {
       throw new Error('el _id es requerido para actualizar el usuario');
+    }
+    const password = payload?.password as string | undefined;
+    if (password && !password.startsWith('$2')) {
+      (payload as Record<string, unknown>).password = await bcrypt.hash(
+        password,
+        10,
+      );
     }
     const updated = await this.userModel.findByIdAndUpdate(id, payload, {
       new: true,
@@ -79,5 +94,18 @@ export class UsersService {
       return byEmployeeNumber;
     }
     throw new Error('debes enviar _id o employeeNumber');
+  }
+
+  async findByEmail(email: string, includePassword = false) {
+    if (!email) {
+      throw new Error('email requerido');
+    }
+    const query = this.userModel.findOne({
+      $or: [{ email }, { 'contact.emails.value': email }],
+    });
+    if (includePassword) {
+      return query.select('+password').exec();
+    }
+    return query.select('-password').exec();
   }
 }

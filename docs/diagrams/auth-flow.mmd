@@ -1,0 +1,62 @@
+sequenceDiagram
+  autonumber
+  participant Client as Cliente
+  participant GW as back-bluee (API Gateway)
+  participant Users as users MS
+  participant DB as MongoDB
+
+  rect rgba(200, 200, 255, 0.1)
+  Note over Client,GW: Login
+  Client->>GW: POST /auth/login { email, password }
+  GW->>GW: AuthController.login() [apps/back-bluee/src/auth/auth.controller.ts]
+  GW->>Users: AuthService.login() [apps/back-bluee/src/auth/auth.service.ts] via RMQ auth.login { data, meta(transactionId) }
+  Users->>Users: AuthController.login() [apps/users/src/auth/auth.controller.ts]
+  Users->>Users: AuthService.login() [apps/users/src/auth/auth.service.ts]
+  Users->>DB: find user by email (+password)
+  Users->>Users: bcrypt.compare(plain, hash)
+  Users->>Users: sign JWT access
+  Users->>Users: generate refresh (jti + token)
+  Users->>DB: store refreshToken hash + jti + expiry
+  Users-->>GW: ResponseEnvelope{accessToken, refreshToken, user, tenantId}
+  GW-->>Client: Set-Cookie access_token, refresh_token + ResponseEnvelope{ok, data}
+  end
+
+  rect rgba(200, 255, 200, 0.1)
+  Note over Client,GW: Me
+  Client->>GW: GET /auth/me (cookies)
+  GW->>GW: JwtAuthGuard.canActivate() [apps/back-bluee/src/auth/guards/jwt-auth.guard.ts]
+  GW->>GW: AuthController.me() [apps/back-bluee/src/auth/auth.controller.ts]
+  GW->>Users: AuthService.me() [apps/back-bluee/src/auth/auth.service.ts] via RMQ auth.me { userId, meta }
+  Users->>Users: AuthController.me() [apps/users/src/auth/auth.controller.ts]
+  Users->>Users: AuthService.me() [apps/users/src/auth/auth.service.ts]
+  Users->>DB: find user by id
+  Users-->>GW: ResponseEnvelope{user, roles, permissions, employeeProfile}
+  GW-->>Client: ResponseEnvelope{data}
+  end
+
+  rect rgba(255, 200, 200, 0.1)
+  Note over Client,GW: Refresh
+  Client->>GW: POST /auth/refresh (refresh cookie)
+  GW->>GW: AuthController.refresh() [apps/back-bluee/src/auth/auth.controller.ts]
+  GW->>Users: AuthService.refresh() [apps/back-bluee/src/auth/auth.service.ts] via RMQ auth.refresh { refreshToken, meta }
+  Users->>Users: AuthController.refresh() [apps/users/src/auth/auth.controller.ts]
+  Users->>Users: AuthService.refresh() [apps/users/src/auth/auth.service.ts]
+  Users->>DB: validate jti + hash + expiry + not revoked
+  Users->>DB: revoke old refresh (revokedAt)
+  Users->>Users: sign new access + new refresh
+  Users->>DB: store new refresh
+  Users-->>GW: ResponseEnvelope{accessToken, refreshToken}
+  GW-->>Client: Set-Cookie new tokens + ResponseEnvelope{ok}
+  end
+
+  rect rgba(255, 240, 200, 0.1)
+  Note over Client,GW: Logout
+  Client->>GW: POST /auth/logout (refresh cookie)
+  GW->>GW: AuthController.logout() [apps/back-bluee/src/auth/auth.controller.ts]
+  GW->>Users: AuthService.logout() [apps/back-bluee/src/auth/auth.service.ts] via RMQ auth.logout { refreshToken, meta }
+  Users->>Users: AuthController.logout() [apps/users/src/auth/auth.controller.ts]
+  Users->>Users: AuthService.logout() [apps/users/src/auth/auth.service.ts]
+  Users->>DB: revoke refresh (revokedAt)
+  Users-->>GW: ResponseEnvelope{ok}
+  GW-->>Client: Clear cookies + ResponseEnvelope{ok}
+  end

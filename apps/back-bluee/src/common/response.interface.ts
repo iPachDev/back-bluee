@@ -27,3 +27,12 @@ export interface RmqRequest<T> {
     trazability?: TraceEntry[];
   };
 }
+
+export interface AuthUserPayload {
+  sub: string;
+  email: string;
+  tenantId?: string;
+  roles?: string[];
+  permissions?: string[];
+  employeeId?: string;
+}

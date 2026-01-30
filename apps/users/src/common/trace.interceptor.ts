@@ -72,6 +72,12 @@ export class TraceInterceptor implements NestInterceptor {
   }
 
   private mapErrorToStatus(message: string): number {
+    if (message.includes('demasiadas solicitudes')) {
+      return 429;
+    }
+    if (message.includes('no autorizado') || message.includes('credenciales')) {
+      return 401;
+    }
     if (message.includes('no encontrado')) {
       return 404;
     }
