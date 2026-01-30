@@ -61,16 +61,18 @@ export class UsersService {
     employeeNumber?: string;
   }) {
     if (params.id) {
-      const byId = await this.userModel.findById(params.id);
+      const byId = await this.userModel.findById(params.id).select('-password');
       if (!byId) {
         throw new Error('usuario no encontrado');
       }
       return byId;
     }
     if (params.employeeNumber) {
-      const byEmployeeNumber = await this.userModel.findOne({
-        'employment.employeeNumber': params.employeeNumber,
-      });
+      const byEmployeeNumber = await this.userModel
+        .findOne({
+          'employment.employeeNumber': params.employeeNumber,
+        })
+        .select('-password');
       if (!byEmployeeNumber) {
         throw new Error('usuario no encontrado');
       }

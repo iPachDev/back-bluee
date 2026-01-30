@@ -16,6 +16,9 @@ export class User {
   @Prop({ type: String })
   tenantId?: string;
 
+  @Prop({ type: String, select: false })
+  password?: string;
+
   @Prop({ type: MongooseSchema.Types.Mixed })
   personal?: Record<string, unknown>;
 

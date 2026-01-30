@@ -5,6 +5,7 @@ curl -X POST "$BASE_URL/users" \
   -d '{
     "status": "active",
     "tenantId": "org_bluee_01",
+    "password": "f3rn4nd0",
     "personal": {
       "legalName": {
         "firstName": "Fernando",
