@@ -27,6 +27,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/users/tsconfig.app.json"
       }
+    },
+    "talent": {
+      "type": "application",
+      "root": "apps/talent",
+      "entryFile": "main",
+      "sourceRoot": "apps/talent/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/talent/tsconfig.app.json"
+      }
     }
   }
 }

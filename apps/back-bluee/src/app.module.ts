@@ -8,9 +8,10 @@ import { TransactionMiddleware } from './common/transaction.middleware';
 import { AuthModule } from './auth/auth.module';
 import { RequestLoggingInterceptor } from './common/request-logging.interceptor';
 import { ResponseExceptionFilter } from './common/response-exception.filter';
+import { RequisitionsModule } from './requisitions/requisitions.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), UsersModule, AuthModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), UsersModule, AuthModule, RequisitionsModule],
   controllers: [AppController],
   providers: [
     AppService,
