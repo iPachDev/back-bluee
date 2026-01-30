@@ -32,5 +32,10 @@ export class User {
 export const UserSchema = SchemaFactory.createForClass(User);
 
 UserSchema.index({ tenantId: 1 });
-UserSchema.index({ 'employment.employeeNumber': 1 });
+UserSchema.add({
+  employment: {
+    employeeNumber: { type: String, immutable: true },
+  },
+});
+UserSchema.index({ 'employment.employeeNumber': 1 }, { unique: true });
 UserSchema.index({ status: 1 });

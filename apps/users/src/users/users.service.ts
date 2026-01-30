@@ -13,6 +13,17 @@ export class UsersService {
     if (payload && '_id' in payload) {
       delete (payload as Record<string, unknown>)._id;
     }
+    const employeeNumber = (
+      payload?.employment as Record<string, unknown> | undefined
+    )?.employeeNumber as string | undefined;
+    if (employeeNumber) {
+      const exists = await this.userModel.exists({
+        'employment.employeeNumber': employeeNumber,
+      });
+      if (exists) {
+        throw new Error('ya existe un usuario con ese employeeNumber');
+      }
+    }
     return this.userModel.create(payload);
   }
 
