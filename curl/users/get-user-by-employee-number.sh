@@ -1,0 +1,4 @@
+BASE_URL=${BASE_URL:-http://localhost:4000}
+EMPLOYEE_NUMBER=${EMPLOYEE_NUMBER:-A-10293}
+
+curl -X GET "$BASE_URL/users?employeeNumber=$EMPLOYEE_NUMBER"
