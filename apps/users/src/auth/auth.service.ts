@@ -134,7 +134,9 @@ export class AuthService {
   }
 
   async getTokenVersion(payload: { userId: string }) {
-    const tokenVersion = await this.usersService.getTokenVersion(payload.userId);
+    const tokenVersion = await this.usersService.getTokenVersion(
+      payload.userId,
+    );
     return { tokenVersion };
   }
 
@@ -150,7 +152,10 @@ export class AuthService {
     if (!user) {
       throw new Error('usuario no encontrado');
     }
-    const ok = await bcrypt.compare(payload.currentPassword, user.password || '');
+    const ok = await bcrypt.compare(
+      payload.currentPassword,
+      user.password || '',
+    );
     if (!ok) {
       throw new Error('credenciales inválidas');
     }

@@ -135,7 +135,10 @@ export class AuthController {
       if (!result.headers?.isSuccess) {
         throw new Error(result.errors?.[0] || 'error inesperado');
       }
-      return { data: result.data ?? null, trace: result.headers?.trazability ?? [] };
+      return {
+        data: result.data ?? null,
+        trace: result.headers?.trazability ?? [],
+      };
     });
   }
 

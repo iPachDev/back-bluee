@@ -11,7 +11,12 @@ import { ResponseExceptionFilter } from './common/response-exception.filter';
 import { RequisitionsModule } from './requisitions/requisitions.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), UsersModule, AuthModule, RequisitionsModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    UsersModule,
+    AuthModule,
+    RequisitionsModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,

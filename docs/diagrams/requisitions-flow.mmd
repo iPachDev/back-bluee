@@ -1,0 +1,54 @@
+sequenceDiagram
+  autonumber
+  participant Client as Cliente
+  participant GW as back-bluee (API Gateway)
+  participant Talent as talent MS
+  participant DB as MongoDB
+
+  rect rgba(220, 240, 255, 0.1)
+  Note over Client,GW: Crear requisición
+  Client->>GW: POST /requisitions { payload }
+  GW->>GW: RequisitionsController.create() [apps/back-bluee/src/requisitions/requisitions.controller.ts]
+  GW->>Talent: RequisitionsService.create() [apps/back-bluee/src/requisitions/requisitions.service.ts] via RMQ requisitions.create
+  Talent->>Talent: RequisitionsController.create() [apps/talent/src/requisitions/requisitions.controller.ts]
+  Talent->>Talent: RequisitionsService.create() [apps/talent/src/requisitions/requisitions.service.ts]
+  Talent->>DB: insert requisition (audit/version)
+  Talent-->>GW: ResponseEnvelope{requisition}
+  GW-->>Client: ResponseEnvelope{data}
+  end
+
+  rect rgba(200, 255, 200, 0.1)
+  Note over Client,GW: Obtener requisición
+  Client->>GW: GET /requisitions/:id
+  GW->>GW: RequisitionsController.getById()
+  GW->>Talent: RequisitionsService.getById() via RMQ requisitions.get
+  Talent->>Talent: RequisitionsController.get()
+  Talent->>Talent: RequisitionsService.findById()
+  Talent->>DB: find requisition (status != deleted)
+  Talent-->>GW: ResponseEnvelope{requisition}
+  GW-->>Client: ResponseEnvelope{data}
+  end
+
+  rect rgba(255, 245, 200, 0.1)
+  Note over Client,GW: Actualizar requisición
+  Client->>GW: PUT /requisitions { payload }
+  GW->>GW: RequisitionsController.update()
+  GW->>Talent: RequisitionsService.update() via RMQ requisitions.update
+  Talent->>Talent: RequisitionsController.update()
+  Talent->>Talent: RequisitionsService.update()
+  Talent->>DB: update requisition (audit/version)
+  Talent-->>GW: ResponseEnvelope{requisition}
+  GW-->>Client: ResponseEnvelope{data}
+  end
+
+  rect rgba(255, 220, 220, 0.1)
+  Note over Client,GW: Eliminar requisición (lógico)
+  Client->>GW: DELETE /requisitions/:id
+  GW->>GW: RequisitionsController.remove()
+  GW->>Talent: RequisitionsService.remove() via RMQ requisitions.delete
+  Talent->>Talent: RequisitionsController.remove()
+  Talent->>Talent: RequisitionsService.removeById()
+  Talent->>DB: update status = deleted (audit/version)
+  Talent-->>GW: ResponseEnvelope{requisition}
+  GW-->>Client: ResponseEnvelope{data}
+  end

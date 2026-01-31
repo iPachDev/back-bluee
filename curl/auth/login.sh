@@ -5,5 +5,5 @@ curl -c "$COOKIE_JAR" -X POST "$BASE_URL/auth/login" \
   -H "Content-Type: application/json" \
   -d '{
     "email": "fernando@empresa.com",
-    "password": "f3rn4nd0"
+    "password": "F3rn4nd0$"
   }'

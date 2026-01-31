@@ -117,7 +117,10 @@ export class UsersService {
   }
 
   async getTokenVersion(id: string) {
-    const user = await this.userModel.findById(id).select('tokenVersion').exec();
+    const user = await this.userModel
+      .findById(id)
+      .select('tokenVersion')
+      .exec();
     return user?.tokenVersion ?? 0;
   }
 
@@ -125,10 +128,7 @@ export class UsersService {
     if (!id) {
       throw new Error('el _id es requerido');
     }
-    await this.userModel.updateOne(
-      { _id: id },
-      { $inc: { tokenVersion: 1 } },
-    );
+    await this.userModel.updateOne({ _id: id }, { $inc: { tokenVersion: 1 } });
     return { ok: true };
   }
 }

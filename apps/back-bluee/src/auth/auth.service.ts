@@ -109,10 +109,7 @@ export class AuthService {
     meta: RmqRequest<unknown>['meta'],
   ) {
     return (await firstValueFrom(
-      this.client.send(
-        { cmd: 'auth.sessions' },
-        { data: payload, meta },
-      ),
+      this.client.send({ cmd: 'auth.sessions' }, { data: payload, meta }),
     )) as ResponseEnvelope<{
       active: Array<{
         id: string;
@@ -128,10 +125,7 @@ export class AuthService {
     meta: RmqRequest<unknown>['meta'],
   ) {
     return (await firstValueFrom(
-      this.client.send(
-        { cmd: 'auth.revoke-session' },
-        { data: payload, meta },
-      ),
+      this.client.send({ cmd: 'auth.revoke-session' }, { data: payload, meta }),
     )) as ResponseEnvelope<{ ok: true }>;
   }
 }
