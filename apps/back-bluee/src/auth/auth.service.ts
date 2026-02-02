@@ -95,6 +95,20 @@ export class AuthService {
     )) as ResponseEnvelope<{ ok: true }>;
   }
 
+  async signup(
+    payload: { email: string; name: string; password: string },
+    meta: RmqRequest<unknown>['meta'],
+  ) {
+    return (await firstValueFrom(
+      this.client.send(
+        { cmd: 'auth.signup' },
+        { data: payload, meta },
+      ),
+    )) as ResponseEnvelope<{
+      user: { id: string; email: string };
+    }>;
+  }
+
   async getTokenVersion(userId: string) {
     return (await firstValueFrom(
       this.client.send(

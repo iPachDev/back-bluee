@@ -35,6 +35,9 @@ export class User {
   @Prop({ type: Number, default: 0 })
   tokenVersion?: number;
 
+  @Prop({ type: [MongooseSchema.Types.ObjectId], ref: 'organizations', default: [] })
+  organizations?: string[];
+
   @Prop({ type: MongooseSchema.Types.Mixed })
   personal?: Record<string, unknown>;
 

@@ -1,4 +1,6 @@
 export enum Role {
-  User = 'user',
-  Admin = 'admin',
+  Owner = 'owner',
+  Employed = 'employed',
+  HumanResource = 'humanresource',
+  // add more roles here as needed
 }

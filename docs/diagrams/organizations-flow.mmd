@@ -1,0 +1,54 @@
+sequenceDiagram
+  autonumber
+  participant Client as Cliente
+  participant GW as back-bluee (API Gateway)
+  participant OrgMS as organizations MS
+  participant DB as MongoDB
+
+  rect rgba(220, 240, 255, 0.1)
+  Note over Client,GW: Crear organización
+  Client->>GW: POST /organizations { payload }
+  GW->>GW: OrganizationsController.create() [apps/back-bluee/src/organizations/organizations.controller.ts]
+  GW->>OrgMS: OrganizationsService.create() [apps/back-bluee/src/organizations/organizations.service.ts] via RMQ organizations.create
+  OrgMS->>OrgMS: OrganizationsController.create() [apps/organizations/src/organizations.controller.ts]
+  OrgMS->>OrgMS: OrganizationsService.create() [apps/organizations/src/organizations.service.ts]
+  OrgMS->>DB: insert organization
+  OrgMS-->>GW: ResponseEnvelope{organization}
+  GW-->>Client: ResponseEnvelope{data}
+  end
+
+  rect rgba(200, 255, 200, 0.1)
+  Note over Client,GW: Obtener organización
+  Client->>GW: GET /organizations/:id
+  GW->>GW: OrganizationsController.getById()
+  GW->>OrgMS: OrganizationsService.getById() via RMQ organizations.get
+  OrgMS->>OrgMS: OrganizationsController.get()
+  OrgMS->>OrgMS: OrganizationsService.findById()
+  OrgMS->>DB: find organization (status != deleted)
+  OrgMS-->>GW: ResponseEnvelope{organization}
+  GW-->>Client: ResponseEnvelope{data}
+  end
+
+  rect rgba(255, 245, 200, 0.1)
+  Note over Client,GW: Actualizar organización
+  Client->>GW: PUT /organizations { payload }
+  GW->>GW: OrganizationsController.update()
+  GW->>OrgMS: OrganizationsService.update() via RMQ organizations.update
+  OrgMS->>OrgMS: OrganizationsController.update()
+  OrgMS->>OrgMS: OrganizationsService.update()
+  OrgMS->>DB: update organization
+  OrgMS-->>GW: ResponseEnvelope{organization}
+  GW-->>Client: ResponseEnvelope{data}
+  end
+
+  rect rgba(255, 220, 220, 0.1)
+  Note over Client,GW: Eliminar organización (lógico)
+  Client->>GW: DELETE /organizations/:id
+  GW->>GW: OrganizationsController.remove()
+  GW->>OrgMS: OrganizationsService.remove() via RMQ organizations.delete
+  OrgMS->>OrgMS: OrganizationsController.remove()
+  OrgMS->>OrgMS: OrganizationsService.removeById()
+  OrgMS->>DB: update status = deleted
+  OrgMS-->>GW: ResponseEnvelope{organization}
+  GW-->>Client: ResponseEnvelope{data}
+  end

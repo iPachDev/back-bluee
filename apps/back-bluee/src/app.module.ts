@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { RequestLoggingInterceptor } from './common/request-logging.interceptor';
 import { ResponseExceptionFilter } from './common/response-exception.filter';
 import { RequisitionsModule } from './requisitions/requisitions.module';
+import { OrganizationsModule } from './organizations/organizations.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { RequisitionsModule } from './requisitions/requisitions.module';
     UsersModule,
     AuthModule,
     RequisitionsModule,
+    OrganizationsModule,
   ],
   controllers: [AppController],
   providers: [

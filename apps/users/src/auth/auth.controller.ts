@@ -93,4 +93,15 @@ export class AuthController {
     const { data } = normalizeRmqPayload(payload);
     return this.authService.getTokenVersion(data);
   }
+
+  @MessagePattern({ cmd: 'auth.signup' })
+  signup(
+    @Payload()
+    payload:
+      | RmqRequest<{ email: string; name: string; password: string }>
+      | { email: string; name: string; password: string },
+  ) {
+    const { data } = normalizeRmqPayload(payload);
+    return this.authService.signup(data);
+  }
 }

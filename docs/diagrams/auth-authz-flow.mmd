@@ -1,0 +1,48 @@
+sequenceDiagram
+  autonumber
+  participant Client as Cliente
+  participant GW as back-bluee (API Gateway)
+  participant Guard as JwtAuthGuard + RolesGuard
+  participant Users as users MS
+  participant DB as MongoDB
+
+  rect rgba(220, 240, 255, 0.1)
+  Note over Client,GW: Login (autenticación)
+  Client->>GW: POST /auth/login { email, password }
+  GW->>Users: RMQ auth.login { data, meta }
+  Users->>DB: find user (+password)
+  Users->>Users: bcrypt.compare()
+  Users->>Users: sign JWT (roles, tokenVersion)
+  Users->>DB: store refresh token hash + jti
+  Users-->>GW: ResponseEnvelope{access, refresh, roles}
+  GW-->>Client: Set-Cookie access_token + refresh_token
+  end
+
+  rect rgba(200, 255, 200, 0.1)
+  Note over Client,GW: Auth + Roles on protected route
+  Client->>GW: GET /organizations (cookies)
+  GW->>Guard: JwtAuthGuard.canActivate()
+  Guard->>Guard: verify JWT signature
+  Guard->>Users: RMQ auth.token-version { userId }
+  Users->>DB: get user.tokenVersion
+  Users-->>Guard: tokenVersion
+  Guard->>Guard: compare tokenVersion
+  GW->>Guard: RolesGuard.canActivate()
+  Guard->>Guard: check @Roles(Role.Owner)
+  Guard-->>GW: allow/deny
+  alt authorized
+    GW-->>Client: ResponseEnvelope{data}
+  else not authorized
+    GW-->>Client: ResponseEnvelope{error 401/403}
+  end
+  end
+
+  rect rgba(255, 220, 220, 0.1)
+  Note over Client,GW: Revoke session (invalidate immediately)
+  Client->>GW: POST /auth/sessions/revoke { sessionId }
+  GW->>Users: RMQ auth.revoke-session { userId, sessionId }
+  Users->>DB: revoke refresh token
+  Users->>DB: increment user.tokenVersion
+  Users-->>GW: ok
+  GW-->>Client: ok
+  end

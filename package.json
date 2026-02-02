@@ -13,6 +13,7 @@
     "start:debug": "nest start back-bluee --debug --watch",
     "start:debug:users": "nest start users --debug --watch",
     "start:debug:talent": "nest start talent --debug --watch",
+    "start:debug:organization": "nest start organizations --debug --watch",
     "start:prod": "node dist/apps/back-bluee/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",

@@ -12,6 +12,8 @@ import { AuthService } from './auth.service';
 import { ResponseEnvelope } from '../common/response.interface';
 import { TransactionRequest } from '../common/transaction.middleware';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { Role } from './enums/role.enum';
+import { Roles } from './roles.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -97,6 +99,25 @@ export class AuthController {
     });
   }
 
+  @Post('signup')
+  async signup(
+    @Body() body: { email: string; name: string; password: string },
+    @Req() req: TransactionRequest & Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const transactionId = req.transactionId;
+    return this.handleResponse(res, transactionId, async () => {
+      const result = await this.authService.signup(body, {
+        transactionId,
+        source: 'back-bluee',
+      });
+      if (!result.headers?.isSuccess) {
+        throw new Error(result.errors?.[0] || 'error inesperado');
+      }
+      return { data: result.data ?? null, trace: result.headers?.trazability ?? [] };
+    });
+  }
+
   @Post('change-password')
   @UseGuards(JwtAuthGuard)
   async changePassword(
@@ -120,6 +141,7 @@ export class AuthController {
   }
 
   @Get('sessions')
+  @Roles(Role.Owner, Role.HumanResource)
   @UseGuards(JwtAuthGuard)
   async sessions(
     @Req() req: TransactionRequest & Request & { user?: { sub: string } },

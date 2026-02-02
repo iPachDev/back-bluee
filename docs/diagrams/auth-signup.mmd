@@ -1,0 +1,16 @@
+sequenceDiagram
+  autonumber
+  participant Client as Cliente
+  participant GW as back-bluee (API Gateway)
+  participant Users as users MS
+  participant DB as MongoDB
+
+  rect rgba(220, 240, 255, 0.1)
+  Note over Client,GW: Signup owner
+  Client->>GW: POST /auth/signup { email, name, password }
+  GW->>Users: RMQ auth.signup { data, meta }
+  Users->>DB: find user by email
+  Users->>DB: create user (role=owner)
+  Users-->>GW: ResponseEnvelope{user}
+  GW-->>Client: ResponseEnvelope{data}
+  end

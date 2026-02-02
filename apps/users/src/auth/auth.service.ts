@@ -133,6 +133,41 @@ export class AuthService {
     };
   }
 
+  async signup(payload: { email: string; name: string; password: string }) {
+    if (!payload.email || !payload.name || !payload.password) {
+      throw new Error('datos incompletos');
+    }
+    const existing = await this.usersService.findByEmail(payload.email, false);
+    if (existing) {
+      throw new Error('el email ya está registrado');
+    }
+    const created = await this.usersService.create({
+      status: 'active',
+      email: payload.email,
+      password: payload.password,
+      roles: ['owner'],
+      personal: {
+        legalName: {
+          firstName: payload.name,
+          lastName: '',
+        },
+        preferredName: payload.name,
+      },
+      contact: {
+        emails: [
+          {
+            type: 'primary',
+            value: payload.email,
+            isPrimary: true,
+          },
+        ],
+      },
+    });
+    return {
+      user: { id: String((created as any)._id), email: payload.email },
+    };
+  }
+
   async getTokenVersion(payload: { userId: string }) {
     const tokenVersion = await this.usersService.getTokenVersion(
       payload.userId,

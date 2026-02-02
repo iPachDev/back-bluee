@@ -131,4 +131,15 @@ export class UsersService {
     await this.userModel.updateOne({ _id: id }, { $inc: { tokenVersion: 1 } });
     return { ok: true };
   }
+
+  async addOrganization(userId: string, organizationId: string) {
+    if (!userId || !organizationId) {
+      throw new Error('datos incompletos');
+    }
+    await this.userModel.updateOne(
+      { _id: userId },
+      { $addToSet: { organizations: organizationId } },
+    );
+    return { ok: true };
+  }
 }
