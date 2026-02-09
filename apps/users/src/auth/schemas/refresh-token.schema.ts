@@ -25,6 +25,12 @@ export class RefreshToken {
 
   @Prop({ type: String })
   ip?: string;
+
+  // Added by Mongoose when `timestamps: true`
+  createdAt?: Date;
+
+  // Added by Mongoose when `timestamps: true`
+  updatedAt?: Date;
 }
 
 export const RefreshTokenSchema = SchemaFactory.createForClass(RefreshToken);

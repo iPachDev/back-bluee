@@ -118,6 +118,18 @@ export class AuthService {
     )) as ResponseEnvelope<{ tokenVersion: number }>;
   }
 
+  async checkAccessToken(userId: string, jti: string, tokenHash: string) {
+    return (await firstValueFrom(
+      this.client.send(
+        { cmd: 'auth.access-check' },
+        {
+          data: { userId, jti, tokenHash },
+          meta: { transactionId: '', source: 'back-bluee' },
+        },
+      ),
+    )) as ResponseEnvelope<{ ok: true }>;
+  }
+
   async listSessions(
     payload: { userId: string },
     meta: RmqRequest<unknown>['meta'],

@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { AuthUserPayload } from '../../common/response.interface';
 import { AuthService } from '../auth.service';
+import { createHash } from 'crypto';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -30,6 +31,15 @@ export class JwtAuthGuard implements CanActivate {
       const result = await this.authService.getTokenVersion(payload.sub);
       const dbVersion = result.data?.tokenVersion ?? 0;
       if ((payload.tokenVersion ?? 0) !== dbVersion) {
+        throw new Error('no autorizado');
+      }
+      const tokenHash = createHash('sha256').update(token).digest('hex');
+      const accessCheck = await this.authService.checkAccessToken(
+        payload.sub,
+        payload.jti ?? '',
+        tokenHash,
+      );
+      if (!accessCheck?.data) {
         throw new Error('no autorizado');
       }
       req.user = payload;

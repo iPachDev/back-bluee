@@ -10,7 +10,7 @@
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "start:debug": "nest start back-bluee --debug --watch",
+    "start:debug:backend": "nest start back-bluee --debug --watch",
     "start:debug:users": "nest start users --debug --watch",
     "start:debug:talent": "nest start talent --debug --watch",
     "start:debug:organization": "nest start organizations --debug --watch",

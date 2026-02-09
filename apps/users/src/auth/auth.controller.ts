@@ -94,6 +94,17 @@ export class AuthController {
     return this.authService.getTokenVersion(data);
   }
 
+  @MessagePattern({ cmd: 'auth.access-check' })
+  accessCheck(
+    @Payload()
+    payload:
+      | RmqRequest<{ userId: string; jti: string; tokenHash: string }>
+      | { userId: string; jti: string; tokenHash: string },
+  ) {
+    const { data } = normalizeRmqPayload(payload);
+    return this.authService.checkAccessToken(data);
+  }
+
   @MessagePattern({ cmd: 'auth.signup' })
   signup(
     @Payload()

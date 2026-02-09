@@ -7,6 +7,7 @@ import {
   RefreshToken,
   RefreshTokenSchema,
 } from './schemas/refresh-token.schema';
+import { AccessToken, AccessTokenSchema } from './schemas/access-token.schema';
 import { UsersFeatureModule } from '../users/users.module';
 
 @Module({
@@ -15,6 +16,7 @@ import { UsersFeatureModule } from '../users/users.module';
     UsersFeatureModule,
     MongooseModule.forFeature([
       { name: RefreshToken.name, schema: RefreshTokenSchema },
+      { name: AccessToken.name, schema: AccessTokenSchema },
     ]),
   ],
   controllers: [AuthController],

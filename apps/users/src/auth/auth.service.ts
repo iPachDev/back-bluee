@@ -8,12 +8,14 @@ import {
   RefreshToken,
   RefreshTokenDocument,
 } from './schemas/refresh-token.schema';
+import { AccessToken, AccessTokenDocument } from './schemas/access-token.schema';
 import { UsersService } from '../users/users.service';
 import { AuthUserPayload } from '../common/response.interface';
 
 @Injectable()
 export class AuthService {
   private readonly accessTtl = '15m';
+  private readonly accessTtlMs = 15 * 60 * 1000;
   private readonly refreshTtlMs = 7 * 24 * 60 * 60 * 1000;
 
   constructor(
@@ -21,6 +23,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     @InjectModel(RefreshToken.name)
     private readonly refreshModel: Model<RefreshTokenDocument>,
+    @InjectModel(AccessToken.name)
+    private readonly accessModel: Model<AccessTokenDocument>,
   ) {}
 
   async login(payload: { email: string; password: string; ip: string }) {
@@ -32,7 +36,7 @@ export class AuthService {
     if (!ok) {
       throw new Error('credenciales inválidas');
     }
-    const accessToken = this.signAccessToken(user);
+    const accessToken = await this.signAccessToken(user);
     const { refreshToken, jti, tokenHash, expiresAt } =
       this.generateRefreshToken();
     await this.refreshModel.create({
@@ -77,7 +81,7 @@ export class AuthService {
       id: tokenDoc.userId,
     });
     const email = this.getPrimaryEmail(user as any);
-    const accessToken = this.signAccessToken(user as any);
+    const accessToken = await this.signAccessToken(user as any);
     const { refreshToken, jti, tokenHash, expiresAt } =
       this.generateRefreshToken();
     await this.refreshModel.create({
@@ -111,6 +115,7 @@ export class AuthService {
       { $set: { revokedAt: new Date() } },
     );
     if (doc?.userId) {
+      await this.revokeAccessTokens(doc.userId);
       await this.usersService.bumpTokenVersion(doc.userId);
     }
     return { ok: true };
@@ -198,6 +203,7 @@ export class AuthService {
       _id: payload.userId,
       password: payload.newPassword,
     });
+    await this.revokeAccessTokens(payload.userId);
     await this.usersService.bumpTokenVersion(payload.userId);
     await this.refreshModel.updateMany(
       { userId: String(payload.userId), revokedAt: { $exists: false } },
@@ -245,7 +251,26 @@ export class AuthService {
     if (result.matchedCount === 0) {
       throw new Error('sesión no encontrada');
     }
+    await this.revokeAccessTokens(payload.userId);
     await this.usersService.bumpTokenVersion(payload.userId);
+    return { ok: true };
+  }
+
+  async checkAccessToken(payload: {
+    userId: string;
+    jti: string;
+    tokenHash: string;
+  }) {
+    const token = await this.accessModel.findOne({
+      userId: String(payload.userId),
+      jti: payload.jti,
+      tokenHash: payload.tokenHash,
+      revokedAt: { $exists: false },
+      expiresAt: { $gt: new Date() },
+    });
+    if (!token) {
+      throw new Error('no autorizado');
+    }
     return { ok: true };
   }
 
@@ -253,11 +278,12 @@ export class AuthService {
     return this.usersService.findByEmail(email, includePassword);
   }
 
-  private signAccessToken(user: any) {
+  private async signAccessToken(user: any) {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
       throw new Error('JWT_SECRET is not set');
     }
+    const jti = randomBytes(16).toString('hex');
     const payload: AuthUserPayload = {
       sub: String(user._id),
       email: user.email || this.getPrimaryEmail(user),
@@ -266,8 +292,19 @@ export class AuthService {
       permissions: user.permissions ?? [],
       employeeId: user.employeeId,
       tokenVersion: user.tokenVersion ?? 0,
+      jti,
     };
-    return this.jwtService.sign(payload, { secret, expiresIn: this.accessTtl });
+    const token = this.jwtService.sign(payload, {
+      secret,
+      expiresIn: this.accessTtl,
+    });
+    await this.accessModel.create({
+      userId: String(user._id),
+      jti,
+      tokenHash: this.hashToken(token),
+      expiresAt: new Date(Date.now() + this.accessTtlMs),
+    });
+    return token;
   }
 
   private getPrimaryEmail(user: any): string {
@@ -299,5 +336,12 @@ export class AuthService {
 
   private hashToken(token: string) {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private async revokeAccessTokens(userId: string) {
+    await this.accessModel.updateMany(
+      { userId: String(userId), revokedAt: { $exists: false } },
+      { $set: { revokedAt: new Date() } },
+    );
   }
 }
