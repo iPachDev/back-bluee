@@ -32,7 +32,10 @@ export class ResponseExceptionFilter implements ExceptionFilter {
         message.includes('credenciales')
       ) {
         statusCode = 401;
-      } else if (message.includes('no encontrado')) {
+      } else if (
+        message.includes('no encontrado') ||
+        message.includes('no encontrada')
+      ) {
         statusCode = 404;
       } else {
         statusCode = 400;

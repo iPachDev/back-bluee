@@ -8,6 +8,7 @@ import { TransactionMiddleware } from './common/transaction.middleware';
 import { AuthModule } from './auth/auth.module';
 import { RequestLoggingInterceptor } from './common/request-logging.interceptor';
 import { ResponseExceptionFilter } from './common/response-exception.filter';
+import { ResponseEnvelopeInterceptor } from './common/response-envelope.interceptor';
 import { RequisitionsModule } from './requisitions/requisitions.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 
@@ -29,6 +30,10 @@ import { OrganizationsModule } from './organizations/organizations.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: RequestLoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseEnvelopeInterceptor,
     },
   ],
 })

@@ -4,7 +4,10 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
 import { OrganizationsController } from './organizations.controller';
 import { OrganizationsService } from './organizations.service';
-import { Organization, OrganizationSchema } from './organizations/schemas/organization.schema';
+import {
+  Organization,
+  OrganizationSchema,
+} from './organizations/schemas/organization.schema';
 import { DatabaseModule } from './database/database.module';
 import { TraceInterceptor } from './common/trace.interceptor';
 

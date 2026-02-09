@@ -8,7 +8,10 @@ import {
   RefreshToken,
   RefreshTokenDocument,
 } from './schemas/refresh-token.schema';
-import { AccessToken, AccessTokenDocument } from './schemas/access-token.schema';
+import {
+  AccessToken,
+  AccessTokenDocument,
+} from './schemas/access-token.schema';
 import { UsersService } from '../users/users.service';
 import { AuthUserPayload } from '../common/response.interface';
 
@@ -51,8 +54,8 @@ export class AuthService {
       refreshToken,
       user: { id: String(user._id), email: payload.email },
       tenantId: user.tenantId,
-      roles: user.roles ?? ['user'],
-      permissions: user.permissions ?? [],
+      roles: user.roles,
+      permissions: user.permissions,
       employeeProfile: user.employeeId ? (user.employment ?? null) : null,
     };
   }

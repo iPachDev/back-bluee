@@ -11,13 +11,19 @@ export class OrganizationsService {
 
   create(payload: Record<string, unknown>, meta: RmqRequest<unknown>['meta']) {
     return firstValueFrom(
-      this.client.send({ cmd: 'organizations.create' }, { data: payload, meta }),
+      this.client.send(
+        { cmd: 'organizations.create' },
+        { data: payload, meta },
+      ),
     ) as Promise<ResponseEnvelope<Record<string, unknown>>>;
   }
 
   update(payload: Record<string, unknown>, meta: RmqRequest<unknown>['meta']) {
     return firstValueFrom(
-      this.client.send({ cmd: 'organizations.update' }, { data: payload, meta }),
+      this.client.send(
+        { cmd: 'organizations.update' },
+        { data: payload, meta },
+      ),
     ) as Promise<ResponseEnvelope<Record<string, unknown>>>;
   }
 
@@ -32,19 +38,13 @@ export class OrganizationsService {
 
   getById(_id: string, meta: RmqRequest<unknown>['meta']) {
     return firstValueFrom(
-      this.client.send(
-        { cmd: 'organizations.get' },
-        { data: { _id }, meta },
-      ),
+      this.client.send({ cmd: 'organizations.get' }, { data: { _id }, meta }),
     ) as Promise<ResponseEnvelope<Record<string, unknown>>>;
   }
 
   list(meta: RmqRequest<unknown>['meta']) {
     return firstValueFrom(
-      this.client.send(
-        { cmd: 'organizations.list' },
-        { data: {}, meta },
-      ),
+      this.client.send({ cmd: 'organizations.list' }, { data: {}, meta }),
     ) as Promise<ResponseEnvelope<Record<string, unknown>[]>>;
   }
 

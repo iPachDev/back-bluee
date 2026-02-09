@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
-import { Organization, OrganizationDocument } from './organizations/schemas/organization.schema';
+import {
+  Organization,
+  OrganizationDocument,
+} from './organizations/schemas/organization.schema';
 
 @Injectable()
 export class OrganizationsService {
@@ -27,10 +30,12 @@ export class OrganizationsService {
     }
     const status = (payload.status as string | undefined) ?? 'active';
     const created = await this.organizationModel.create({ ...payload, status });
-    await this.connection.collection('users').updateOne(
-      { _id: new Types.ObjectId(userId) },
-      { $addToSet: { organizations: created._id } },
-    );
+    await this.connection
+      .collection('users')
+      .updateOne(
+        { _id: new Types.ObjectId(userId) },
+        { $addToSet: { organizations: created._id } },
+      );
     return created;
   }
 
@@ -43,9 +48,13 @@ export class OrganizationsService {
     if (!current || current.status === 'deleted') {
       throw new Error('organización no encontrada');
     }
-    const updated = await this.organizationModel.findByIdAndUpdate(id, payload, {
-      new: true,
-    });
+    const updated = await this.organizationModel.findByIdAndUpdate(
+      id,
+      payload,
+      {
+        new: true,
+      },
+    );
     if (!updated) {
       throw new Error('organización no encontrada');
     }

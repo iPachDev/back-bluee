@@ -11,7 +11,9 @@ async function bootstrap() {
   }
   const queueName = process.env.MS_NAME_ORGANIZATIONS;
   if (!queueName) {
-    throw new Error('no se a definido el nombre del microservicio organizations');
+    throw new Error(
+      'no se a definido el nombre del microservicio organizations',
+    );
   }
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
     OrganizationsModule,

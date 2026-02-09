@@ -100,10 +100,7 @@ export class AuthService {
     meta: RmqRequest<unknown>['meta'],
   ) {
     return (await firstValueFrom(
-      this.client.send(
-        { cmd: 'auth.signup' },
-        { data: payload, meta },
-      ),
+      this.client.send({ cmd: 'auth.signup' }, { data: payload, meta }),
     )) as ResponseEnvelope<{
       user: { id: string; email: string };
     }>;
