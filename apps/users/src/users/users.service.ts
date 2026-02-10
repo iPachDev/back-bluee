@@ -138,7 +138,7 @@ export class UsersService {
     }
     await this.userModel.updateOne(
       { _id: userId },
-      { $addToSet: { organizations: organizationId } },
+      { $set: { tenantId: organizationId } },
     );
     return { ok: true };
   }

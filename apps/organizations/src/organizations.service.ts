@@ -34,7 +34,7 @@ export class OrganizationsService {
       .collection('users')
       .updateOne(
         { _id: new Types.ObjectId(userId) },
-        { $addToSet: { organizations: created._id } },
+        { $set: { tenantId: created._id } },
       );
     return created;
   }
@@ -114,15 +114,14 @@ export class OrganizationsService {
     if (!user) {
       throw new Error('usuario no encontrado');
     }
-    const orgIds = ((user as any).organizations ?? []).map(
-      (id: any) => new Types.ObjectId(id),
-    );
-    if (orgIds.length === 0) {
+    const tenantId = (user as any).tenantId;
+    if (!tenantId) {
       return [];
     }
+    const tenantObjectId = new Types.ObjectId(tenantId);
     return this.organizationModel
-      .find({ _id: { $in: orgIds }, status: { $ne: 'deleted' } })
+      .find({ _id: tenantObjectId, status: { $ne: 'deleted' } })
       .sort({ createdAt: -1 })
-      .limit(50);
+      .limit(1);
   }
 }
