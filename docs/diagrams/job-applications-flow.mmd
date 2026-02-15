@@ -1,0 +1,54 @@
+sequenceDiagram
+  autonumber
+  participant Client as Cliente
+  participant GW as back-bluee (API Gateway)
+  participant Talent as talent MS
+  participant DB as MongoDB
+
+  rect rgba(220, 240, 255, 0.1)
+  Note over Client,GW: Crear configuración
+  Client->>GW: POST /job-applications { payload }
+  GW->>GW: JobApplicationsController.create() [apps/back-bluee/src/job-applications/job-applications.controller.ts]
+  GW->>Talent: JobApplicationsService.create() [apps/back-bluee/src/job-applications/job-applications.service.ts] via RMQ job-applications.create
+  Talent->>Talent: JobApplicationsController.create() [apps/talent/src/job-applications/job-applications.controller.ts]
+  Talent->>Talent: JobApplicationsService.create() [apps/talent/src/job-applications/job-applications.service.ts]
+  Talent->>DB: insert config (isActive=true)
+  Talent-->>GW: ResponseEnvelope{config}
+  GW-->>Client: ResponseEnvelope{data}
+  end
+
+  rect rgba(200, 255, 200, 0.1)
+  Note over Client,GW: Obtener configuración por tenantId
+  Client->>GW: GET /job-applications?tenantId=...
+  GW->>GW: JobApplicationsController.getByTenant()
+  GW->>Talent: JobApplicationsService.getByTenant() via RMQ job-applications.get
+  Talent->>Talent: JobApplicationsController.getByTenant()
+  Talent->>Talent: JobApplicationsService.findByTenant()
+  Talent->>DB: findOne { tenantId, isActive: true }
+  Talent-->>GW: ResponseEnvelope{config}
+  GW-->>Client: ResponseEnvelope{data}
+  end
+
+  rect rgba(255, 245, 200, 0.1)
+  Note over Client,GW: Actualizar configuración
+  Client->>GW: PUT /job-applications { tenantId, _id, payload }
+  GW->>GW: JobApplicationsController.update()
+  GW->>Talent: JobApplicationsService.update() via RMQ job-applications.update
+  Talent->>Talent: JobApplicationsController.update()
+  Talent->>Talent: JobApplicationsService.update()
+  Talent->>DB: update config (tenantId + _id, isActive=true)
+  Talent-->>GW: ResponseEnvelope{config}
+  GW-->>Client: ResponseEnvelope{data}
+  end
+
+  rect rgba(255, 220, 220, 0.1)
+  Note over Client,GW: Eliminar configuración (lógico)
+  Client->>GW: DELETE /job-applications/:id?tenantId=...
+  GW->>GW: JobApplicationsController.remove()
+  GW->>Talent: JobApplicationsService.remove() via RMQ job-applications.delete
+  Talent->>Talent: JobApplicationsController.remove()
+  Talent->>Talent: JobApplicationsService.removeByIdAndTenant()
+  Talent->>DB: update isActive=false
+  Talent-->>GW: ResponseEnvelope{config}
+  GW-->>Client: ResponseEnvelope{data}
+  end

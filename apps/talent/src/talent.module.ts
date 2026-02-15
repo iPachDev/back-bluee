@@ -6,12 +6,14 @@ import { TalentService } from './talent.service';
 import { RequisitionsModule } from './requisitions/requisitions.module';
 import { DatabaseModule } from './database/database.module';
 import { TraceInterceptor } from './common/trace.interceptor';
+import { JobApplicationsModule } from './job-applications/job-applications.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
     RequisitionsModule,
+    JobApplicationsModule,
   ],
   controllers: [TalentController],
   providers: [

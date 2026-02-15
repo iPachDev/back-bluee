@@ -11,6 +11,7 @@ import { ResponseExceptionFilter } from './common/response-exception.filter';
 import { ResponseEnvelopeInterceptor } from './common/response-envelope.interceptor';
 import { RequisitionsModule } from './requisitions/requisitions.module';
 import { OrganizationsModule } from './organizations/organizations.module';
+import { JobApplicationsModule } from './job-applications/job-applications.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { OrganizationsModule } from './organizations/organizations.module';
     AuthModule,
     RequisitionsModule,
     OrganizationsModule,
+    JobApplicationsModule,
   ],
   controllers: [AppController],
   providers: [
