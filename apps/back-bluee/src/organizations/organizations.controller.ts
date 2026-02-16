@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -19,6 +20,22 @@ import { Role } from '../auth/enums/role.enum';
 @Controller('organizations')
 export class OrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService) {}
+
+  @Get('public/by-slug/:slug')
+  async getBySlugPublic(
+    @Param('slug') slug: string,
+    @Req() req: TransactionRequest,
+  ) {
+    const normalizedSlug = String(slug || '').trim().toLowerCase();
+    if (!normalizedSlug) {
+      throw new BadRequestException('slug requerido');
+    }
+    const transactionId = req.transactionId;
+    return this.organizationsService.getBySlug(normalizedSlug, {
+      transactionId,
+      source: 'back-bluee',
+    });
+  }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)

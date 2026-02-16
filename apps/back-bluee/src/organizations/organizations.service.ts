@@ -56,4 +56,13 @@ export class OrganizationsService {
       ),
     ) as Promise<ResponseEnvelope<Record<string, unknown>[]>>;
   }
+
+  getBySlug(slug: string, meta: RmqRequest<unknown>['meta']) {
+    return firstValueFrom(
+      this.client.send(
+        { cmd: 'organizations.get-by-slug' },
+        { data: { slug }, meta },
+      ),
+    ) as Promise<ResponseEnvelope<Record<string, unknown>>>;
+  }
 }

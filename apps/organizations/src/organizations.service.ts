@@ -124,4 +124,22 @@ export class OrganizationsService {
       .sort({ createdAt: -1 })
       .limit(1);
   }
+
+  async findBySlug(slug: string) {
+    const normalizedSlug = String(slug || '').trim().toLowerCase();
+    if (!normalizedSlug) {
+      throw new Error('slug requerido');
+    }
+
+    const org = await this.organizationModel.findOne({
+      status: { $ne: 'deleted' },
+      'identity.slug': normalizedSlug,
+    });
+
+    if (!org) {
+      throw new Error('organización no encontrada');
+    }
+
+    return org;
+  }
 }

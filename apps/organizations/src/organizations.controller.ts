@@ -60,4 +60,13 @@ export class OrganizationsController {
     const { data } = normalizeRmqPayload(payload);
     return this.organizationsService.listByUserId(data?.userId ?? '');
   }
+
+  @MessagePattern({ cmd: 'organizations.get-by-slug' })
+  getBySlug(
+    @Payload()
+    payload: RmqRequest<{ slug?: string }> | { slug?: string },
+  ) {
+    const { data } = normalizeRmqPayload(payload);
+    return this.organizationsService.findBySlug(data?.slug ?? '');
+  }
 }
