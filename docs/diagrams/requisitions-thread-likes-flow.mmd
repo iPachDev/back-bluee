@@ -1,0 +1,19 @@
+sequenceDiagram
+  autonumber
+  participant U as Usuario autenticado
+  participant FE as Frontend Requisition Form
+  participant BFF as back-bluee
+  participant TAL as talent (RMQ)
+  participant DB as MongoDB
+
+  U->>FE: Click "Me gusta" en mensaje del thread
+  FE->>FE: toggle like por userId en conversationThread[i].likes[]
+  FE->>BFF: PUT /requisitions {_id,status,approvalFlow}
+  BFF->>TAL: RMQ requisitions.update
+  TAL->>TAL: normalize + validate likes (sin duplicados)
+  TAL->>TAL: permitir update de solo likes en thread
+  TAL->>DB: persistir approvalFlow.conversationThread.likes
+  TAL-->>BFF: requisición actualizada
+  BFF-->>FE: ok
+  FE-->>U: render "Te gusta" + tooltip con nombres
+

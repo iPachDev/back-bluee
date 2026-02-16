@@ -1,0 +1,25 @@
+sequenceDiagram
+  autonumber
+  participant G as Guest Browser (bluee.localhost)
+  participant FE as Frontend /jobs
+  participant BFF as back-bluee
+  participant ORG as organizations (RMQ)
+  participant TAL as talent (RMQ)
+  participant DB as MongoDB
+
+  G->>FE: GET /jobs
+  FE->>FE: obtener slug desde host (bluee)
+  FE->>BFF: GET /organizations/public/by-slug/bluee
+  BFF->>ORG: RMQ organizations.get-by-slug
+  ORG->>DB: findOne({ identity.slug: "bluee" })
+  ORG-->>BFF: organización (_id tenantId)
+  BFF-->>FE: tenantId resuelto
+
+  FE->>BFF: GET /requisitions/public?tenantId=<org._id>
+  BFF->>TAL: RMQ requisitions.list
+  TAL->>DB: listar por tenantId
+  TAL-->>BFF: requisiciones
+  BFF->>BFF: filtrar publicadas (recruiting + site_web)
+  BFF-->>FE: vacantes públicas
+  FE-->>G: render listado de jobs
+
