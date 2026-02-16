@@ -11,6 +11,11 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { TransactionRequest } from '../common/transaction.middleware';
+import {
+  type CreateUserDto,
+  type ListUsersQueryDto,
+  type UpdateUserDto,
+} from './dto/user.dto';
 
 @Controller('users')
 export class UsersController {
@@ -18,8 +23,9 @@ export class UsersController {
 
   @Post()
   async create(
-    @Body() payload: Record<string, unknown>,
+    @Body() payload: CreateUserDto,
     @Req() req: TransactionRequest,
+    _res?: unknown,
   ) {
     const transactionId = req.transactionId;
     return this.usersService.create(payload, {
@@ -30,8 +36,9 @@ export class UsersController {
 
   @Put()
   async update(
-    @Body() payload: Record<string, unknown>,
+    @Body() payload: UpdateUserDto,
     @Req() req: TransactionRequest,
+    _res?: unknown,
   ) {
     const transactionId = req.transactionId;
     return this.usersService.update(payload, {
@@ -41,7 +48,11 @@ export class UsersController {
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string, @Req() req: TransactionRequest) {
+  async remove(
+    @Param('id') id: string,
+    @Req() req: TransactionRequest,
+    _res?: unknown,
+  ) {
     const transactionId = req.transactionId;
     return this.usersService.remove(id, {
       transactionId,
@@ -50,7 +61,11 @@ export class UsersController {
   }
 
   @Get(':id')
-  async getById(@Param('id') id: string, @Req() req: TransactionRequest) {
+  async getById(
+    @Param('id') id: string,
+    @Req() req: TransactionRequest,
+    _res?: unknown,
+  ) {
     const transactionId = req.transactionId;
     return this.usersService.find(
       { _id: id },
@@ -59,9 +74,42 @@ export class UsersController {
   }
 
   @Get()
-  async getByEmployeeNumber(
+  async list(
+    @Query('tenantId') tenantId: string,
     @Query('employeeNumber') employeeNumber: string | undefined,
+    @Query('page') page: string | undefined,
+    @Query('limit') limit: string | undefined,
+    @Query('status') status: string | undefined,
+    @Query('search') search: string | undefined,
     @Req() req: TransactionRequest,
+  ) {
+    const transactionId = req.transactionId;
+
+    if (employeeNumber) {
+      return this.usersService.find(
+        { employeeNumber },
+        { transactionId, source: 'back-bluee' },
+      );
+    }
+
+    const payload: ListUsersQueryDto = {
+      tenantId,
+      page: Number.parseInt(page ?? '1', 10),
+      limit: Number.parseInt(limit ?? '10', 10),
+      status: status as ListUsersQueryDto['status'],
+      search,
+    };
+
+    return this.usersService.list(payload, {
+      transactionId,
+      source: 'back-bluee',
+    });
+  }
+
+  async getByEmployeeNumber(
+    employeeNumber: string | undefined,
+    req: TransactionRequest,
+    _res?: unknown,
   ) {
     const transactionId = req.transactionId;
     return this.usersService.find(

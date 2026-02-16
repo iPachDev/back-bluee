@@ -6,6 +6,19 @@ curl -X PUT "$BASE_URL/requisitions" \
   -d "{
     \"_id\": \"$REQ_ID\",
     \"status\": \"draft\",
-    \"title\": \"Software Engineer II\",
-    \"audit\": { \"updatedBy\": \"user_01\" }
+    \"position\": {
+      \"title\": \"Frontend React Developer\",
+      \"department\": \"Technology\",
+      \"area\": \"Customer Experience\",
+      \"reportsTo\": \"Head of Engineering\",
+      \"positionsOpen\": 1,
+      \"justification\": \"Ajuste de perfil\"
+    },
+    \"approvalFlow\": {
+      \"requestedBy\": \"usr_1030\",
+      \"approvals\": [
+        { \"approverUserId\": \"usr_2010\", \"approverName\": \"F Pacheco\", \"status\": \"pending\" }
+      ],
+      \"conversationThread\": []
+    }
   }"

@@ -3,6 +3,10 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { RequisitionsService } from './requisitions.service';
 import { RmqRequest } from '../common/response.interface';
 import { normalizeRmqPayload } from '../common/rmq.utils';
+import {
+  type CreateRequisitionDto,
+  type UpdateRequisitionDto,
+} from './dto/requisition.dto';
 
 @Controller()
 export class RequisitionsController {
@@ -11,7 +15,7 @@ export class RequisitionsController {
   @MessagePattern({ cmd: 'requisitions.create' })
   create(
     @Payload()
-    payload: RmqRequest<Record<string, unknown>> | Record<string, unknown>,
+    payload: RmqRequest<CreateRequisitionDto> | CreateRequisitionDto,
   ) {
     const { data } = normalizeRmqPayload(payload);
     return this.requisitionsService.create(data);
@@ -20,7 +24,7 @@ export class RequisitionsController {
   @MessagePattern({ cmd: 'requisitions.update' })
   update(
     @Payload()
-    payload: RmqRequest<Record<string, unknown>> | Record<string, unknown>,
+    payload: RmqRequest<UpdateRequisitionDto> | UpdateRequisitionDto,
   ) {
     const { data } = normalizeRmqPayload(payload);
     return this.requisitionsService.update(data);

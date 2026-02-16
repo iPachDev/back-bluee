@@ -1,0 +1,42 @@
+sequenceDiagram
+  autonumber
+  participant Client as Cliente
+  participant GW as back-bluee (API Gateway)
+  participant UsersMS as users MS
+  participant DB as MongoDB
+
+  rect rgba(220, 240, 255, 0.1)
+  Note over Client,GW: Crear usuario
+  Client->>GW: POST /users { payload }
+  GW->>GW: UsersController.create() [apps/back-bluee/src/users/users.controller.ts]
+  GW->>UsersMS: UsersService.create() via RMQ users.create
+  UsersMS->>UsersMS: UsersController.create() [apps/users/src/users/users.controller.ts]
+  UsersMS->>UsersMS: UsersService.create() [apps/users/src/users/users.service.ts]
+  UsersMS->>DB: insert user (hash password)
+  UsersMS-->>GW: ResponseEnvelope{user}
+  GW-->>Client: ResponseEnvelope{data}
+  end
+
+  rect rgba(200, 255, 200, 0.1)
+  Note over Client,GW: Listado paginado
+  Client->>GW: GET /users?tenantId&page&limit&search&status
+  GW->>GW: UsersController.list()
+  GW->>UsersMS: UsersService.list() via RMQ users.list
+  UsersMS->>UsersMS: UsersController.list()
+  UsersMS->>UsersMS: UsersService.listByTenant()
+  UsersMS->>DB: find + skip + limit + countDocuments
+  UsersMS-->>GW: ResponseEnvelope{items,total,page,limit}
+  GW-->>Client: ResponseEnvelope{data}
+  end
+
+  rect rgba(255, 220, 220, 0.1)
+  Note over Client,GW: Eliminar usuario (lógico)
+  Client->>GW: DELETE /users/:id
+  GW->>GW: UsersController.remove()
+  GW->>UsersMS: UsersService.remove() via RMQ users.delete
+  UsersMS->>UsersMS: UsersController.remove()
+  UsersMS->>UsersMS: UsersService.removeById()
+  UsersMS->>DB: update status = eliminated
+  UsersMS-->>GW: ResponseEnvelope{user}
+  GW-->>Client: ResponseEnvelope{data}
+  end

@@ -3,6 +3,12 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import * as bcrypt from 'bcryptjs';
+import {
+  type CreateUserDto,
+  type ListUsersQueryDto,
+  type ListUsersResultDto,
+  type UpdateUserDto,
+} from './dto/user.dto';
 
 @Injectable()
 export class UsersService {
@@ -10,20 +16,22 @@ export class UsersService {
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
   ) {}
 
-  async create(payload: Record<string, unknown>) {
-    if (payload && '_id' in payload) {
-      delete (payload as Record<string, unknown>)._id;
+  async create(payload: CreateUserDto) {
+    const toCreate: Record<string, unknown> = { ...(payload ?? {}) };
+
+    if ('_id' in toCreate) {
+      delete toCreate._id;
     }
-    const password = payload?.password as string | undefined;
+
+    const password = toCreate.password as string | undefined;
     if (password && !password.startsWith('$2')) {
-      (payload as Record<string, unknown>).password = await bcrypt.hash(
-        password,
-        10,
-      );
+      toCreate.password = await bcrypt.hash(password, 10);
     }
-    const employeeNumber = (
-      payload?.employment as Record<string, unknown> | undefined
-    )?.employeeNumber as string | undefined;
+
+    const employment = toCreate.employment as
+      | { employeeNumber?: string }
+      | undefined;
+    const employeeNumber = employment?.employeeNumber;
     if (employeeNumber) {
       const exists = await this.userModel.exists({
         'employment.employeeNumber': employeeNumber,
@@ -32,27 +40,30 @@ export class UsersService {
         throw new Error('ya existe un usuario con ese employeeNumber');
       }
     }
-    return this.userModel.create(payload);
+
+    return this.userModel.create(toCreate);
   }
 
-  async update(payload: Record<string, unknown>) {
-    const id = payload?._id as string | undefined;
+  async update(payload: UpdateUserDto) {
+    const id = payload?._id;
     if (!id) {
       throw new Error('el _id es requerido para actualizar el usuario');
     }
-    const password = payload?.password as string | undefined;
+
+    const toUpdate: Record<string, unknown> = { ...(payload ?? {}) };
+    const password = toUpdate.password as string | undefined;
     if (password && !password.startsWith('$2')) {
-      (payload as Record<string, unknown>).password = await bcrypt.hash(
-        password,
-        10,
-      );
+      toUpdate.password = await bcrypt.hash(password, 10);
     }
-    const updated = await this.userModel.findByIdAndUpdate(id, payload, {
+
+    const updated = await this.userModel.findByIdAndUpdate(id, toUpdate, {
       new: true,
     });
+
     if (!updated) {
       throw new Error('usuario no encontrado');
     }
+
     return updated;
   }
 
@@ -60,14 +71,17 @@ export class UsersService {
     if (!id) {
       throw new Error('el _id es requerido para eliminar el usuario');
     }
+
     const updated = await this.userModel.findByIdAndUpdate(
       id,
       { status: 'eliminated' },
       { new: true },
     );
+
     if (!updated) {
       throw new Error('usuario no encontrado');
     }
+
     return updated;
   }
 
@@ -82,6 +96,7 @@ export class UsersService {
       }
       return byId;
     }
+
     if (params.employeeNumber) {
       const byEmployeeNumber = await this.userModel
         .findOne({
@@ -93,7 +108,69 @@ export class UsersService {
       }
       return byEmployeeNumber;
     }
+
     throw new Error('debes enviar _id o employeeNumber');
+  }
+
+  async listByTenant(query: ListUsersQueryDto): Promise<ListUsersResultDto> {
+    const tenantId = query.tenantId;
+    if (!tenantId) {
+      throw new Error('tenantId requerido');
+    }
+
+    const page = Math.max(1, Number(query.page ?? 1));
+    const limit = Math.min(50, Math.max(1, Number(query.limit ?? 10)));
+    const skip = (page - 1) * limit;
+
+    const filter: Record<string, unknown> = { tenantId };
+
+    if (query.status) {
+      filter.status = query.status;
+    } else {
+      filter.status = { $ne: 'eliminated' };
+    }
+
+    const search = query.search?.trim();
+    if (search) {
+      filter.$or = [
+        { email: { $regex: search, $options: 'i' } },
+        {
+          'personal.legalName.firstName': {
+            $regex: search,
+            $options: 'i',
+          },
+        },
+        {
+          'personal.legalName.lastName': {
+            $regex: search,
+            $options: 'i',
+          },
+        },
+        {
+          'employment.employeeNumber': {
+            $regex: search,
+            $options: 'i',
+          },
+        },
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      this.userModel
+        .find(filter)
+        .select('-password')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      this.userModel.countDocuments(filter),
+    ]);
+
+    return {
+      items: items as unknown as Record<string, unknown>[],
+      total,
+      page,
+      limit,
+    };
   }
 
   async findByEmail(email: string, includePassword = false) {

@@ -1,0 +1,64 @@
+sequenceDiagram
+  autonumber
+  participant U as Usuario solicitante
+  participant A as Usuario aprobador
+  participant FE as Frontend
+  participant GW as back-bluee
+  participant TAL as talent (RMQ)
+  participant DB as MongoDB
+
+  rect rgba(220,240,255,0.12)
+    Note over U,DB: 1) Borrador: solicitante configura aprobadores (autocomplete)
+    U->>FE: Buscar "fpacheco" y seleccionar aprobadores
+    FE->>GW: PUT /requisitions {_id, status:draft, approvalFlow.approvals[]}
+    GW->>TAL: RMQ requisitions.update
+    TAL->>TAL: valida que en draft se pueda editar lista
+    TAL->>DB: update requisition
+    TAL-->>GW: ResponseEnvelope
+    GW-->>FE: ok
+  end
+
+  rect rgba(255,245,200,0.12)
+    Note over U,DB: 2) Enviar requisición
+    U->>FE: Enviar a RRHH (submitted)
+    FE->>GW: PUT /requisitions {_id, status:submitted}
+    GW->>TAL: RMQ requisitions.update
+    TAL->>DB: update status=submitted
+    TAL-->>GW: ResponseEnvelope
+    GW-->>FE: ok
+  end
+
+  rect rgba(220,255,220,0.12)
+    Note over A,DB: 3) Aprobador manda a revisión
+    A->>FE: Acción review_requested + comentario
+    FE->>GW: PUT /requisitions {_id, approvalFlow}
+    GW->>TAL: RMQ requisitions.update
+    TAL->>TAL: valida actor sobre su propia aprobación
+    TAL->>TAL: agrega evento al conversationThread
+    TAL->>TAL: status vuelve a draft y reinicia approvals->pending
+    TAL->>DB: persistir cambios
+    TAL-->>GW: ResponseEnvelope
+    GW-->>FE: ok
+  end
+
+  rect rgba(230,230,255,0.12)
+    Note over U,DB: 4) Solicitante responde al hilo
+    U->>FE: Responder comentario en thread
+    FE->>GW: PUT /requisitions {_id, approvalFlow.conversationThread}
+    GW->>TAL: RMQ requisitions.update
+    TAL->>TAL: valida que quien responde sea requestedBy
+    TAL->>DB: append comentario en conversationThread
+    TAL-->>GW: ResponseEnvelope
+    GW-->>FE: ok
+  end
+
+  rect rgba(210,255,210,0.12)
+    Note over A,DB: 5) Aprobación final
+    A->>FE: approved + comentario
+    FE->>GW: PUT /requisitions {_id, approvalFlow}
+    GW->>TAL: RMQ requisitions.update
+    TAL->>TAL: si todos approved => status approved
+    TAL->>DB: persistir aprobación
+    TAL-->>GW: ResponseEnvelope
+    GW-->>FE: ok
+  end
