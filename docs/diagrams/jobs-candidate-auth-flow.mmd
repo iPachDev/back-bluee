@@ -1,0 +1,28 @@
+sequenceDiagram
+  autonumber
+  participant C as Candidato (bluee.localhost)
+  participant FE as Front Jobs
+  participant BFF as back-bluee
+  participant ORG as organizations (RMQ)
+  participant USR as users/auth (RMQ)
+  participant DB as MongoDB
+
+  C->>FE: POST /jobs/signup (email, name, password)
+  FE->>BFF: GET /organizations/public/by-slug/:slug
+  BFF->>ORG: RMQ organizations.get-by-slug
+  ORG->>DB: findOne identity.slug
+  ORG-->>BFF: organization (_id tenantId)
+  FE->>BFF: POST /auth/jobs/signup (tenantId + credenciales)
+  BFF->>USR: RMQ auth.signup-candidate
+  USR->>DB: create user role=candidate, tenantId
+  USR-->>BFF: user creado
+  BFF-->>FE: ok
+
+  C->>FE: POST /jobs/login
+  FE->>BFF: POST /auth/jobs/login
+  BFF->>USR: RMQ auth.login
+  USR->>DB: validate credenciales + emitir tokens
+  USR-->>BFF: access/refresh + roles
+  BFF->>BFF: valida role=candidate
+  BFF-->>FE: set cookies httpOnly + sesión jobs
+

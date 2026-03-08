@@ -1,0 +1,53 @@
+sequenceDiagram
+  autonumber
+  participant Candidate as Candidato (/jobs/:id)
+  participant Admin as Usuario interno (/home/requisitions/:id)
+  participant GW as back-bluee (API Gateway)
+  participant Talent as talent MS
+  participant DB as MongoDB
+
+  rect rgba(220, 240, 255, 0.1)
+  Note over Candidate,GW: Aplicar a vacante
+  Candidate->>GW: POST /requisitions/:id/apply { tenantId }
+  GW->>GW: RequisitionsController.apply() [Jwt + Role.Candidate]
+  GW->>Talent: RequisitionsService.applyToRequisition() via RMQ requisitions.apply
+  Talent->>Talent: RequisitionsController.apply()
+  Talent->>Talent: RequisitionsService.applyToRequisition()
+  Talent->>DB: valida requisition (tenantId, recruiting, site_web)
+  Talent->>DB: upsert lógico en requisition_applications (tenantId, requisitionId, userId)
+  Talent-->>GW: ResponseEnvelope{application}
+  GW-->>Candidate: ResponseEnvelope{data}
+  end
+
+  rect rgba(200, 255, 200, 0.1)
+  Note over Candidate,GW: Consultar si ya aplicó
+  Candidate->>GW: GET /requisitions/:id/my-application?tenantId=...
+  GW->>Talent: RMQ requisitions.application.by-user
+  Talent->>DB: findOne by (tenantId, requisitionId, userId)
+  Talent-->>GW: ResponseEnvelope{application|null}
+  GW-->>Candidate: ResponseEnvelope{data}
+  end
+
+  rect rgba(255, 245, 200, 0.1)
+  Note over Candidate,GW: Listar postulaciones del candidato
+  Candidate->>GW: GET /requisitions/applications/me?tenantId=...&page=1&limit=10
+  GW->>Talent: RMQ requisitions.applications.by-user
+  Talent->>DB: find + skip/limit + total
+  Talent-->>GW: ResponseEnvelope{items,total,page,limit}
+  GW-->>Candidate: ResponseEnvelope{data}
+  end
+
+  rect rgba(255, 220, 220, 0.1)
+  Note over Admin,GW: Métricas y candidatos por requisición
+  Admin->>GW: GET /requisitions/:id/metrics?tenantId=...
+  GW->>Talent: RMQ requisitions.metrics
+  Talent->>DB: countDocuments by (tenantId, requisitionId)
+  Talent-->>GW: ResponseEnvelope{totalCandidates}
+  GW-->>Admin: ResponseEnvelope{data}
+
+  Admin->>GW: GET /requisitions/:id/applications?tenantId=...&page=1&limit=10
+  GW->>Talent: RMQ requisitions.applications.by-requisition
+  Talent->>DB: find + skip/limit + total by (tenantId, requisitionId)
+  Talent-->>GW: ResponseEnvelope{items,total,page,limit}
+  GW-->>Admin: ResponseEnvelope{data}
+  end

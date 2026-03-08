@@ -5,4 +5,5 @@ export enum Role {
   AreaManager = 'area_manager',
   Coordinator = 'coordinator',
   Supervisor = 'supervisor',
+  Candidate = 'candidate',
 }

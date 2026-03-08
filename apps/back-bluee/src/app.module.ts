@@ -12,6 +12,7 @@ import { ResponseEnvelopeInterceptor } from './common/response-envelope.intercep
 import { RequisitionsModule } from './requisitions/requisitions.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { JobApplicationsModule } from './job-applications/job-applications.module';
+import { CandidatesModule } from './candidates/candidates.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { JobApplicationsModule } from './job-applications/job-applications.modul
     RequisitionsModule,
     OrganizationsModule,
     JobApplicationsModule,
+    CandidatesModule,
   ],
   controllers: [AppController],
   providers: [

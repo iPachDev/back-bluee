@@ -7,6 +7,10 @@ import {
   type JobRequisitionDto,
   type UpdateRequisitionDto,
 } from './dto/requisition.dto';
+import {
+  type RequisitionApplicationDto,
+  type RequisitionApplicationsPageDto,
+} from './dto/requisition-application.dto';
 
 @Injectable()
 export class RequisitionsService {
@@ -102,4 +106,67 @@ export class RequisitionsService {
 
     return response;
   }
+
+  applyToRequisition(
+    payload: {
+      tenantId: string;
+      requisitionId: string;
+      userId: string;
+      candidateName?: string;
+      candidateEmail?: string;
+      source?: 'site_web';
+    },
+    meta: RmqRequest<unknown>['meta'],
+  ) {
+    return firstValueFrom(
+      this.client.send({ cmd: 'requisitions.apply' }, { data: payload, meta }),
+    ) as Promise<ResponseEnvelope<RequisitionApplicationDto>>;
+  }
+
+  getMyApplication(
+    payload: { tenantId: string; requisitionId: string; userId: string },
+    meta: RmqRequest<unknown>['meta'],
+  ) {
+    return firstValueFrom(
+      this.client.send(
+        { cmd: 'requisitions.application.by-user' },
+        { data: payload, meta },
+      ),
+    ) as Promise<ResponseEnvelope<RequisitionApplicationDto | null>>;
+  }
+
+  listApplicationsByRequisition(
+    payload: { tenantId: string; requisitionId: string; page?: number; limit?: number },
+    meta: RmqRequest<unknown>['meta'],
+  ) {
+    return firstValueFrom(
+      this.client.send(
+        { cmd: 'requisitions.applications.by-requisition' },
+        { data: payload, meta },
+      ),
+    ) as Promise<ResponseEnvelope<RequisitionApplicationsPageDto>>;
+  }
+
+  listApplicationsByUser(
+    payload: { tenantId: string; userId: string; page?: number; limit?: number },
+    meta: RmqRequest<unknown>['meta'],
+  ) {
+    return firstValueFrom(
+      this.client.send(
+        { cmd: 'requisitions.applications.by-user' },
+        { data: payload, meta },
+      ),
+    ) as Promise<ResponseEnvelope<RequisitionApplicationsPageDto>>;
+  }
+
+  getMetrics(
+    payload: { tenantId: string; requisitionId: string },
+    meta: RmqRequest<unknown>['meta'],
+  ) {
+    return firstValueFrom(
+      this.client.send({ cmd: 'requisitions.metrics' }, { data: payload, meta }),
+    ) as Promise<ResponseEnvelope<{ totalCandidates: number }>>;
+  }
+
 }
+

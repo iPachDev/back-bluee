@@ -7,6 +7,7 @@ import { RequisitionsModule } from './requisitions/requisitions.module';
 import { DatabaseModule } from './database/database.module';
 import { TraceInterceptor } from './common/trace.interceptor';
 import { JobApplicationsModule } from './job-applications/job-applications.module';
+import { CandidatesModule } from './candidates/candidates.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { JobApplicationsModule } from './job-applications/job-applications.modul
     DatabaseModule,
     RequisitionsModule,
     JobApplicationsModule,
+    CandidatesModule,
   ],
   controllers: [TalentController],
   providers: [

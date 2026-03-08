@@ -50,4 +50,13 @@ export class UsersController {
     const { data } = normalizeRmqPayload(payload);
     return this.usersService.listByTenant(data);
   }
+
+  @MessagePattern({ cmd: 'users.promote-candidate' })
+  promoteCandidate(
+    @Payload()
+    payload: RmqRequest<{ userId: string; position?: Record<string, unknown> }> | { userId: string; position?: Record<string, unknown> },
+  ) {
+    const { data } = normalizeRmqPayload(payload);
+    return this.usersService.promoteCandidateToEmployed(data.userId, data.position);
+  }
 }

@@ -32,6 +32,12 @@ export class UsersService {
       | { employeeNumber?: string }
       | undefined;
     const employeeNumber = employment?.employeeNumber;
+    if (employment && !employeeNumber) {
+      delete (employment as Record<string, unknown>).employeeNumber;
+      if (Object.keys(employment).length === 0) {
+        delete toCreate.employment;
+      }
+    }
     if (employeeNumber) {
       const exists = await this.userModel.exists({
         'employment.employeeNumber': employeeNumber,
@@ -218,5 +224,101 @@ export class UsersService {
       { $set: { tenantId: organizationId } },
     );
     return { ok: true };
+  }
+
+  async updateCandidateProfile(payload: {
+    userId: string;
+    personal?: Record<string, unknown>;
+    candidateProfile?: Record<string, unknown>;
+    cvData?: Record<string, unknown>;
+  }) {
+    if (!payload.userId) {
+      throw new Error('userId requerido');
+    }
+
+    const update: Record<string, unknown> = {};
+    if (payload.personal) {
+      update.personal = payload.personal;
+    }
+    if (payload.candidateProfile) {
+      update.candidateProfile = payload.candidateProfile;
+    }
+    if (payload.cvData) {
+      update.cvData = payload.cvData;
+    }
+
+    const updated = await this.userModel
+      .findByIdAndUpdate(payload.userId, { $set: update }, { new: true })
+      .select('-password');
+    if (!updated) {
+      throw new Error('usuario no encontrado');
+    }
+    return updated;
+  }
+
+  async listCandidateApplications(userId: string) {
+    if (!userId) {
+      throw new Error('userId requerido');
+    }
+    const user = await this.userModel
+      .findById(userId)
+      .select('candidateApplications')
+      .exec();
+    if (!user) {
+      throw new Error('usuario no encontrado');
+    }
+    const applications =
+      ((user as unknown as { candidateApplications?: unknown[] })
+        .candidateApplications ?? []) as unknown[];
+    return { applications };
+  }
+
+  private async generateEmployeeNumber(): Promise<string> {
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const value = String(Math.floor(10000 + Math.random() * 90000));
+      const exists = await this.userModel.exists({ 'employment.employeeNumber': value });
+      if (!exists) {
+        return value;
+      }
+    }
+    throw new Error('no fue posible generar employeeNumber');
+  }
+
+  async promoteCandidateToEmployed(userId: string, position?: Record<string, unknown>) {
+    if (!userId) {
+      throw new Error('userId requerido');
+    }
+
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) {
+      throw new Error('usuario no encontrado');
+    }
+
+    const roles = new Set((user.roles ?? []) as string[]);
+    roles.delete('candidate');
+    roles.add('employed');
+
+    const currentEmployment = (user.employment ?? {}) as Record<string, unknown>;
+    const hasEmployeeNumber = Boolean(currentEmployment.employeeNumber);
+    const employeeNumber = hasEmployeeNumber
+      ? String(currentEmployment.employeeNumber)
+      : await this.generateEmployeeNumber();
+
+    const history = Array.isArray(currentEmployment.positionHistory)
+      ? [...(currentEmployment.positionHistory as Record<string, unknown>[])]
+      : [];
+    const nextPosition = position ? { ...position } : undefined;
+    const nextHistory = nextPosition ? [nextPosition, ...history] : history;
+
+    user.roles = Array.from(roles);
+    user.employment = {
+      ...currentEmployment,
+      employeeNumber,
+      ...(nextPosition ? { position: nextPosition } : {}),
+      positionHistory: nextHistory,
+    };
+
+    await user.save();
+    return user;
   }
 }

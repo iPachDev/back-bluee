@@ -97,5 +97,5 @@ UserSchema.add({
     employeeNumber: { type: String, immutable: true },
   },
 });
-UserSchema.index({ 'employment.employeeNumber': 1 }, { unique: true });
+UserSchema.index({ 'employment.employeeNumber': 1 }, { unique: true, sparse: true });
 UserSchema.index({ status: 1 });

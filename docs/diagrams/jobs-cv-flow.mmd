@@ -1,0 +1,28 @@
+sequenceDiagram
+  autonumber
+  participant C as Candidato autenticado
+  participant FE as Front /jobs/cv
+  participant BFF as back-bluee
+  participant TAL as talent (RMQ)
+  participant USR as users/auth (RMQ)
+  participant DB as MongoDB
+
+  C->>FE: GET /jobs/cv
+  FE->>BFF: GET /auth/jobs/me
+  BFF->>USR: RMQ auth.me
+  USR->>DB: get user by id
+  USR-->>BFF: user + tenantId + roles
+  FE->>BFF: GET /job-applications?tenantId=<tenantId>
+  BFF->>TAL: RMQ job-applications.get
+  TAL->>DB: get config (sections/fields)
+  TAL-->>BFF: configuración CV
+  BFF-->>FE: config + user.cvData
+  FE-->>C: render dinámico con HeroUI (Input/Select/Checkbox)
+
+  C->>FE: Guardar CV
+  FE->>BFF: PUT /auth/jobs/profile { cvData }
+  BFF->>USR: RMQ auth.update-candidate-profile
+  USR->>DB: update user.cvData
+  USR-->>BFF: user actualizado
+  BFF-->>FE: ok
+

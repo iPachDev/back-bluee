@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Put,
   Post,
   Req,
   Res,
@@ -17,6 +18,13 @@ import { Roles } from './roles.decorator';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  private ensureCandidate(user: { roles?: string[] } | undefined) {
+    const roles = user?.roles ?? [];
+    if (!roles.includes(Role.Candidate)) {
+      throw new Error('acceso solo para candidatos');
+    }
+  }
 
   @Post('login')
   async login(
@@ -111,6 +119,61 @@ export class AuthController {
     };
   }
 
+  @Post('jobs/signup')
+  async jobsSignup(
+    @Body() body: { email: string; name: string; password: string; tenantId: string },
+    @Req() req: TransactionRequest & Request,
+  ) {
+    const transactionId = req.transactionId;
+    const result = await this.authService.signupCandidate(body, {
+      transactionId,
+      source: 'back-bluee',
+    });
+    if (!result.headers?.isSuccess) {
+      throw new Error(result.errors?.[0] || 'error inesperado');
+    }
+    return {
+      data: result.data ?? null,
+      trace: result.headers?.trazability ?? [],
+    };
+  }
+
+  @Post('jobs/login')
+  async jobsLogin(
+    @Body() body: { email: string; password: string },
+    @Req() req: TransactionRequest & Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const transactionId = req.transactionId;
+    const result = await this.authService.login(
+      { ...body, ip: req.ip },
+      { transactionId, source: 'back-bluee' },
+    );
+    if (!result.headers?.isSuccess) {
+      throw new Error(result.errors?.[0] || 'error inesperado');
+    }
+    const roles = result.data?.roles ?? [];
+    if (!roles.includes(Role.Candidate)) {
+      throw new Error('acceso solo para candidatos');
+    }
+    this.setAuthCookies(
+      res,
+      result.data?.accessToken,
+      result.data?.refreshToken,
+    );
+    return {
+      data: {
+        ok: true,
+        data: {
+          user: result.data?.user,
+          tenantId: result.data?.tenantId,
+          roles: result.data?.roles ?? [],
+        },
+      },
+      trace: result.headers?.trazability ?? [],
+    };
+  }
+
   @Post('change-password')
   @UseGuards(JwtAuthGuard)
   async changePassword(
@@ -178,6 +241,75 @@ export class AuthController {
     const transactionId = req.transactionId;
     const userId = req.user?.sub ?? '';
     const result = await this.authService.me(
+      { userId },
+      { transactionId, source: 'back-bluee' },
+    );
+    if (!result.headers?.isSuccess) {
+      throw new Error(result.errors?.[0] || 'error inesperado');
+    }
+    return {
+      data: result.data ?? null,
+      trace: result.headers?.trazability ?? [],
+    };
+  }
+
+  @Get('jobs/me')
+  @UseGuards(JwtAuthGuard)
+  async jobsMe(
+    @Req() req: TransactionRequest & Request & { user?: { sub: string; roles?: string[] } },
+  ) {
+    this.ensureCandidate(req.user);
+    const transactionId = req.transactionId;
+    const userId = req.user?.sub ?? '';
+    const result = await this.authService.me(
+      { userId },
+      { transactionId, source: 'back-bluee' },
+    );
+    if (!result.headers?.isSuccess) {
+      throw new Error(result.errors?.[0] || 'error inesperado');
+    }
+    return {
+      data: result.data ?? null,
+      trace: result.headers?.trazability ?? [],
+    };
+  }
+
+  @Put('jobs/profile')
+  @UseGuards(JwtAuthGuard)
+  async updateJobsProfile(
+    @Body()
+    body: {
+      personal?: Record<string, unknown>;
+      candidateProfile?: Record<string, unknown>;
+      cvData?: Record<string, unknown>;
+    },
+    @Req() req: TransactionRequest & Request & { user?: { sub: string; roles?: string[] } },
+  ) {
+    this.ensureCandidate(req.user);
+    const transactionId = req.transactionId;
+    const userId = req.user?.sub ?? '';
+    const result = await this.authService.updateCandidateProfile(
+      { userId, ...body },
+      { transactionId, source: 'back-bluee' },
+    );
+    if (!result.headers?.isSuccess) {
+      throw new Error(result.errors?.[0] || 'error inesperado');
+    }
+    return {
+      data: result.data ?? null,
+      trace: result.headers?.trazability ?? [],
+    };
+  }
+
+  @Get('jobs/applications')
+  @UseGuards(JwtAuthGuard)
+  async jobsApplications(
+    @Req() req: TransactionRequest & Request & { user?: { sub: string; roles?: string[] } },
+  ) {
+    this.ensureCandidate(req.user);
+    const transactionId = req.transactionId;
+    const userId = req.user?.sub ?? '';
+    const result = await this.authService.listCandidateApplications(
       { userId },
       { transactionId, source: 'back-bluee' },
     );

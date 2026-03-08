@@ -176,6 +176,49 @@ export class AuthService {
     };
   }
 
+  async signupCandidate(payload: {
+    email: string;
+    name: string;
+    password: string;
+    tenantId: string;
+  }) {
+    if (!payload.email || !payload.name || !payload.password || !payload.tenantId) {
+      throw new Error('datos incompletos');
+    }
+    const existing = await this.usersService.findByEmail(payload.email, false);
+    if (existing) {
+      throw new Error('el email ya está registrado');
+    }
+    const created = await this.usersService.create({
+      status: 'active',
+      tenantId: payload.tenantId,
+      email: payload.email,
+      password: payload.password,
+      roles: ['candidate'],
+      personal: {
+        legalName: {
+          firstName: payload.name,
+          lastName: '',
+        },
+        preferredName: payload.name,
+      },
+      contact: {
+        emails: [
+          {
+            type: 'primary',
+            value: payload.email,
+            isPrimary: true,
+          },
+        ],
+      },
+      cvData: {},
+      candidateApplications: [],
+    });
+    return {
+      user: { id: String((created as any)._id), email: payload.email },
+    };
+  }
+
   async getTokenVersion(payload: { userId: string }) {
     const tokenVersion = await this.usersService.getTokenVersion(
       payload.userId,
@@ -275,6 +318,41 @@ export class AuthService {
       throw new Error('no autorizado');
     }
     return { ok: true };
+  }
+
+  async updateCandidateProfile(payload: {
+    userId: string;
+    personal?: Record<string, unknown>;
+    candidateProfile?: Record<string, unknown>;
+    cvData?: Record<string, unknown>;
+  }) {
+    if (!payload.userId) {
+      throw new Error('userId requerido');
+    }
+    const user = await this.usersService.findByIdOrEmployeeNumber({
+      id: payload.userId,
+    });
+    const roles = ((user as any)?.roles ?? []) as string[];
+    if (!roles.includes('candidate')) {
+      throw new Error('solo candidatos pueden editar su perfil de jobs');
+    }
+
+    const updated = await this.usersService.updateCandidateProfile(payload);
+    return { user: updated };
+  }
+
+  async listCandidateApplications(payload: { userId: string }) {
+    if (!payload.userId) {
+      throw new Error('userId requerido');
+    }
+    const user = await this.usersService.findByIdOrEmployeeNumber({
+      id: payload.userId,
+    });
+    const roles = ((user as any)?.roles ?? []) as string[];
+    if (!roles.includes('candidate')) {
+      throw new Error('solo candidatos pueden consultar postulaciones');
+    }
+    return this.usersService.listCandidateApplications(payload.userId);
   }
 
   private async findUserByEmail(email: string, includePassword = false) {

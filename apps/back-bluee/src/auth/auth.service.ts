@@ -106,6 +106,17 @@ export class AuthService {
     }>;
   }
 
+  async signupCandidate(
+    payload: { email: string; name: string; password: string; tenantId: string },
+    meta: RmqRequest<unknown>['meta'],
+  ) {
+    return (await firstValueFrom(
+      this.client.send({ cmd: 'auth.signup-candidate' }, { data: payload, meta }),
+    )) as ResponseEnvelope<{
+      user: { id: string; email: string };
+    }>;
+  }
+
   async getTokenVersion(userId: string) {
     return (await firstValueFrom(
       this.client.send(
@@ -150,5 +161,31 @@ export class AuthService {
     return (await firstValueFrom(
       this.client.send({ cmd: 'auth.revoke-session' }, { data: payload, meta }),
     )) as ResponseEnvelope<{ ok: true }>;
+  }
+
+  async updateCandidateProfile(
+    payload: {
+      userId: string;
+      personal?: Record<string, unknown>;
+      candidateProfile?: Record<string, unknown>;
+      cvData?: Record<string, unknown>;
+    },
+    meta: RmqRequest<unknown>['meta'],
+  ) {
+    return (await firstValueFrom(
+      this.client.send(
+        { cmd: 'auth.update-candidate-profile' },
+        { data: payload, meta },
+      ),
+    )) as ResponseEnvelope<{ user: Record<string, unknown> }>;
+  }
+
+  async listCandidateApplications(
+    payload: { userId: string },
+    meta: RmqRequest<unknown>['meta'],
+  ) {
+    return (await firstValueFrom(
+      this.client.send({ cmd: 'auth.candidate-applications' }, { data: payload, meta }),
+    )) as ResponseEnvelope<{ applications: unknown[] }>;
   }
 }

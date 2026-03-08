@@ -42,7 +42,7 @@ export class Requisition {
       department: { type: String, required: true },
       area: { type: String, required: true },
       reportsTo: { type: String, required: true },
-      positionsOpen: { type: Number, required: true, min: 1 },
+      positionsOpen: { type: Number, required: true, min: 0 },
       justification: { type: String, required: true },
     }),
   )

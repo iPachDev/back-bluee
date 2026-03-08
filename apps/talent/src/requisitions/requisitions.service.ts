@@ -1,7 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Requisition, RequisitionDocument } from './schemas/requisition.schema';
+import {
+  RequisitionApplication,
+  RequisitionApplicationDocument,
+} from './schemas/requisition-application.schema';
+import {
+  CandidateApplication,
+  CandidateApplicationDocument,
+} from '../candidates/schemas/candidate-application.schema';
 import {
   APPROVAL_THREAD_ACTIONS,
   APPROVAL_STATUSES,
@@ -11,6 +19,12 @@ import {
   type RequisitionPublicStatus,
   type UpdateRequisitionDto,
 } from './dto/requisition.dto';
+import {
+  type ApplyRequisitionDto,
+  type GetRequisitionApplicationByUserDto,
+  type ListRequisitionApplicationsDto,
+  type ListUserRequisitionApplicationsDto,
+} from './dto/requisition-application.dto';
 
 const STATUS_ORDER: Record<RequisitionPublicStatus, number> = {
   draft: 0,
@@ -242,6 +256,10 @@ export class RequisitionsService {
   constructor(
     @InjectModel(Requisition.name)
     private readonly requisitionModel: Model<RequisitionDocument>,
+    @InjectModel(RequisitionApplication.name)
+    private readonly requisitionApplicationModel: Model<RequisitionApplicationDocument>,
+    @InjectModel(CandidateApplication.name)
+    private readonly candidateApplicationModel: Model<CandidateApplicationDocument>,
   ) {}
 
   async create(payload: CreateRequisitionDto) {
@@ -571,4 +589,165 @@ export class RequisitionsService {
       .sort({ createdAt: -1 })
       .limit(50);
   }
+
+  async applyToRequisition(payload: ApplyRequisitionDto) {
+    const tenantId = (payload?.tenantId ?? '').trim();
+    const requisitionId = (payload?.requisitionId ?? '').trim();
+    const userId = (payload?.userId ?? '').trim();
+
+    if (!tenantId || !requisitionId || !userId) {
+      throw new Error('tenantId, requisitionId y userId son requeridos');
+    }
+
+    if (!Types.ObjectId.isValid(requisitionId)) {
+      throw new Error('requisitionId inválido');
+    }
+
+    const requisition = await this.requisitionModel.findOne({
+      _id: requisitionId,
+      tenantId,
+      status: { $ne: 'deleted' },
+    });
+
+    if (!requisition) {
+      throw new Error('requisición no encontrada');
+    }
+
+    if (requisition.status !== 'recruiting') {
+      throw new Error('solo se puede aplicar a requisiciones en reclutamiento');
+    }
+
+    const hasSiteWebPublication = Boolean(
+      (requisition.publications ?? []).some(
+        (item) => item.channel === 'site_web' && Boolean(item.publishedAt),
+      ),
+    );
+    if (!hasSiteWebPublication) {
+      throw new Error('la requisición no está publicada en sitio web');
+    }
+
+    if (Types.ObjectId.isValid(userId)) {
+      const rejected = await this.candidateApplicationModel.findOne({
+        tenantId,
+        requisitionId: new Types.ObjectId(requisitionId),
+        candidateId: new Types.ObjectId(userId),
+        status: 'rejected',
+      });
+      if (rejected) {
+        throw new Error('la postulación fue rechazada y no puede reaplicarse');
+      }
+    }
+
+    const existing = await this.requisitionApplicationModel.findOne({
+      tenantId,
+      requisitionId,
+      userId,
+    });
+    if (existing) {
+      return existing;
+    }
+
+    const now = new Date().toISOString();
+    return this.requisitionApplicationModel.create({
+      tenantId,
+      requisitionId,
+      userId,
+      candidateName: payload.candidateName?.trim() || undefined,
+      candidateEmail: payload.candidateEmail?.trim() || undefined,
+      status: 'applied',
+      source: payload.source ?? 'site_web',
+      appliedAt: now,
+    });
+  }
+
+  async getApplicationByUser(payload: GetRequisitionApplicationByUserDto) {
+    const tenantId = (payload?.tenantId ?? '').trim();
+    const requisitionId = (payload?.requisitionId ?? '').trim();
+    const userId = (payload?.userId ?? '').trim();
+    if (!tenantId || !requisitionId || !userId || userId === 'null' || userId === 'undefined') {
+      throw new Error('tenantId, requisitionId y userId son requeridos');
+    }
+
+    const item = await this.requisitionApplicationModel.findOne({
+      tenantId,
+      requisitionId,
+      userId,
+    });
+
+    return item;
+  }
+
+  async listApplicationsByRequisition(payload: ListRequisitionApplicationsDto) {
+    const tenantId = (payload?.tenantId ?? '').trim();
+    const requisitionId = (payload?.requisitionId ?? '').trim();
+    if (!tenantId || !requisitionId) {
+      throw new Error('tenantId y requisitionId son requeridos');
+    }
+
+    const page = Math.max(1, Number(payload.page ?? 1));
+    const limit = Math.min(100, Math.max(1, Number(payload.limit ?? 10)));
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      this.requisitionApplicationModel
+        .find({ tenantId, requisitionId })
+        .sort({ appliedAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      this.requisitionApplicationModel.countDocuments({ tenantId, requisitionId }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async listApplicationsByUser(payload: ListUserRequisitionApplicationsDto) {
+    const tenantId = (payload?.tenantId ?? '').trim();
+    const userId = (payload?.userId ?? '').trim();
+    if (!tenantId || !userId) {
+      throw new Error('tenantId y userId son requeridos');
+    }
+
+    const page = Math.max(1, Number(payload.page ?? 1));
+    const limit = Math.min(100, Math.max(1, Number(payload.limit ?? 10)));
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      this.requisitionApplicationModel
+        .find({ tenantId, userId })
+        .sort({ appliedAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      this.requisitionApplicationModel.countDocuments({ tenantId, userId }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async getMetricsByRequisition(payload: { tenantId: string; requisitionId: string }) {
+    const tenantId = (payload?.tenantId ?? '').trim();
+    const requisitionId = (payload?.requisitionId ?? '').trim();
+    if (!tenantId || !requisitionId) {
+      throw new Error('tenantId y requisitionId son requeridos');
+    }
+
+    const totalCandidates = await this.requisitionApplicationModel.countDocuments({
+      tenantId,
+      requisitionId,
+    });
+
+    return {
+      totalCandidates,
+    };
+  }
+
 }

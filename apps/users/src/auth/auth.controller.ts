@@ -115,4 +115,55 @@ export class AuthController {
     const { data } = normalizeRmqPayload(payload);
     return this.authService.signup(data);
   }
+
+  @MessagePattern({ cmd: 'auth.signup-candidate' })
+  signupCandidate(
+    @Payload()
+    payload:
+      | RmqRequest<{
+          email: string;
+          name: string;
+          password: string;
+          tenantId: string;
+        }>
+      | {
+          email: string;
+          name: string;
+          password: string;
+          tenantId: string;
+        },
+  ) {
+    const { data } = normalizeRmqPayload(payload);
+    return this.authService.signupCandidate(data);
+  }
+
+  @MessagePattern({ cmd: 'auth.update-candidate-profile' })
+  updateCandidateProfile(
+    @Payload()
+    payload:
+      | RmqRequest<{
+          userId: string;
+          personal?: Record<string, unknown>;
+          candidateProfile?: Record<string, unknown>;
+          cvData?: Record<string, unknown>;
+        }>
+      | {
+          userId: string;
+          personal?: Record<string, unknown>;
+          candidateProfile?: Record<string, unknown>;
+          cvData?: Record<string, unknown>;
+        },
+  ) {
+    const { data } = normalizeRmqPayload(payload);
+    return this.authService.updateCandidateProfile(data);
+  }
+
+  @MessagePattern({ cmd: 'auth.candidate-applications' })
+  candidateApplications(
+    @Payload()
+    payload: RmqRequest<{ userId: string }> | { userId: string },
+  ) {
+    const { data } = normalizeRmqPayload(payload);
+    return this.authService.listCandidateApplications(data);
+  }
 }

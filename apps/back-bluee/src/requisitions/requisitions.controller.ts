@@ -135,6 +135,169 @@ export class RequisitionsController {
     });
   }
 
+
+
+  @Post(':id/apply')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Candidate)
+  async apply(
+    @Param('id') id: string,
+    @Body() payload: { tenantId?: string },
+    @Req() req: TransactionRequest & { user?: { sub?: string; email?: string; tenantId?: string } },
+  ) {
+    const tenantId = payload?.tenantId ?? req.user?.tenantId ?? '';
+    if (!tenantId) {
+      throw new BadRequestException('tenantId requerido');
+    }
+
+    const userId = req.user?.sub ?? '';
+    const candidateEmail = req.user?.email ?? '';
+    if (!userId || userId === 'null' || userId === 'undefined') {
+      throw new BadRequestException('usuario candidato inválido');
+    }
+
+    return this.requisitionsService.applyToRequisition(
+      {
+        tenantId,
+        requisitionId: id,
+        userId,
+        candidateName: candidateEmail,
+        candidateEmail,
+        source: 'site_web',
+      },
+      {
+        transactionId: req.transactionId,
+        source: 'back-bluee',
+      },
+    );
+  }
+
+  @Get(':id/my-application')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Candidate)
+  async getMyApplication(
+    @Param('id') id: string,
+    @Query('tenantId') tenantId: string | undefined,
+    @Req() req: TransactionRequest & { user?: { sub?: string; tenantId?: string } },
+  ) {
+    const nextTenantId = tenantId ?? req.user?.tenantId ?? '';
+    if (!nextTenantId) {
+      throw new BadRequestException('tenantId requerido');
+    }
+    const userId = req.user?.sub ?? '';
+    if (!userId) {
+      throw new BadRequestException('usuario candidato inválido');
+    }
+
+    return this.requisitionsService.getMyApplication(
+      {
+        tenantId: nextTenantId,
+        requisitionId: id,
+        userId,
+      },
+      {
+        transactionId: req.transactionId,
+        source: 'back-bluee',
+      },
+    );
+  }
+
+  @Get('applications/me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Candidate)
+  async listMyApplications(
+    @Query('tenantId') tenantId: string | undefined,
+    @Query('page') page: string | undefined,
+    @Query('limit') limit: string | undefined,
+    @Req() req: TransactionRequest & { user?: { sub?: string; tenantId?: string } },
+  ) {
+    const nextTenantId = tenantId ?? req.user?.tenantId ?? '';
+    if (!nextTenantId) {
+      throw new BadRequestException('tenantId requerido');
+    }
+    const userId = req.user?.sub ?? '';
+    if (!userId) {
+      throw new BadRequestException('usuario candidato inválido');
+    }
+
+    return this.requisitionsService.listApplicationsByUser(
+      {
+        tenantId: nextTenantId,
+        userId,
+        page: Number(page ?? 1),
+        limit: Number(limit ?? 10),
+      },
+      {
+        transactionId: req.transactionId,
+        source: 'back-bluee',
+      },
+    );
+  }
+
+  @Get(':id/applications')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(
+    Role.Owner,
+    Role.HumanResource,
+    Role.AreaManager,
+    Role.Coordinator,
+    Role.Supervisor,
+  )
+  async listCandidates(
+    @Param('id') id: string,
+    @Query('tenantId') tenantId: string | undefined,
+    @Query('page') page: string | undefined,
+    @Query('limit') limit: string | undefined,
+    @Req() req: TransactionRequest,
+  ) {
+    if (!tenantId) {
+      throw new BadRequestException('tenantId requerido');
+    }
+
+    return this.requisitionsService.listApplicationsByRequisition(
+      {
+        tenantId,
+        requisitionId: id,
+        page: Number(page ?? 1),
+        limit: Number(limit ?? 10),
+      },
+      {
+        transactionId: req.transactionId,
+        source: 'back-bluee',
+      },
+    );
+  }
+
+  @Get(':id/metrics')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(
+    Role.Owner,
+    Role.HumanResource,
+    Role.AreaManager,
+    Role.Coordinator,
+    Role.Supervisor,
+  )
+  async getMetrics(
+    @Param('id') id: string,
+    @Query('tenantId') tenantId: string | undefined,
+    @Req() req: TransactionRequest,
+  ) {
+    if (!tenantId) {
+      throw new BadRequestException('tenantId requerido');
+    }
+
+    return this.requisitionsService.getMetrics(
+      {
+        tenantId,
+        requisitionId: id,
+      },
+      {
+        transactionId: req.transactionId,
+        source: 'back-bluee',
+      },
+    );
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(
